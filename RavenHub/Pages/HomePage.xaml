@@ -1,0 +1,46 @@
+﻿<Page x:Class="RavenHub.Pages.HomePage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+      Title="HomePage">
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Заголовок с иконкой -->
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,20">
+            <materialDesign:PackIcon Kind="Home" Width="32" Height="32" Margin="0,0,8,0"/>
+            <TextBlock Text="Главная" 
+                       Style="{StaticResource MaterialDesignHeadline5TextBlock}"
+                       VerticalAlignment="Center"/>
+        </StackPanel>
+
+        <!-- Секция контента -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="0.4*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Приветственный текст слева -->
+            <TextBlock Grid.Column="0" 
+                       Margin="0,0,20,0" 
+                       TextWrapping="Wrap"
+                       MaxWidth="600"
+                       VerticalAlignment="Center"
+                       Style="{StaticResource MaterialDesignBody1TextBlock}">
+                <Run Text="Добро пожаловать в RavenHub!" FontWeight="Bold" FontSize="30"/><LineBreak/>
+                <Run Text="Погрузитесь в мир современных технологий! У нас вы найдете новейшие гаджеты для работы, развлечений и творчества. RavenHub — ваш проводник в будущее!" FontSize="16"/>
+            </TextBlock>
+            <Image Grid.Column="1" 
+                   Source="/Images/for_homepage.jpg" 
+                   Stretch="Uniform" 
+                   MaxWidth="750"
+                   Margin="20,0,0,0"
+                   VerticalAlignment="Center"/>
+        </Grid>
+    </Grid>
+</Page>

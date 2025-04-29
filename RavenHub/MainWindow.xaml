@@ -1,0 +1,124 @@
+﻿<Window x:Class="RavenHub.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        xmlns:local="clr-namespace:RavenHub"
+        Title="RavenHub"
+        Height="640"
+        Width="900"
+        ResizeMode="CanMinimize"
+        WindowStyle="SingleBorderWindow"
+        WindowStartupLocation="CenterScreen"
+        Icon="/Images/RavenHub.jpg"
+        Background="{DynamicResource MaterialDesignBackground}"
+        FontSize="16">
+    <Grid x:Name="MainGrid" DataContext="{x:Static local:LocaleManager.Instance}">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition x:Name="SidebarColumn" Width="80"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- Кнопка переключения сайдбара - теперь сбоку по центру -->
+        <Button x:Name="ToggleSidebarButton" 
+                Grid.Column="0"
+                HorizontalAlignment="Right" 
+                VerticalAlignment="Center"
+                Margin="60,60,-20,60"
+                Width="40" Height="40"
+                Style="{StaticResource MaterialDesignIconButton}"
+                Panel.ZIndex="1"
+                Click="ToggleSidebarButton_Click">
+            <materialDesign:PackIcon Kind="SwapHorizontal" Width="40" Height="40" />
+        </Button>
+
+        <Border x:Name="NavPanel" 
+                Grid.Column="0" 
+                Background="{DynamicResource MaterialDesignBackground}" 
+                BorderBrush="{DynamicResource MaterialDesignDivider}" 
+                BorderThickness="0,0,1,0"
+                Padding="12">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- Вернули кнопку "Главная" -->
+                <Button Grid.Row="0"
+                        Style="{StaticResource MaterialDesignOutlinedButton}"
+                        Height="40" Margin="0,0,0,10"
+                        Click="HomeButton_Click">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <materialDesign:PackIcon Kind="Home" Width="22" Height="22" Margin="0,0,10,0"/>
+                        <TextBlock x:Name="HomeText" 
+                                   Text="{Binding Home}" 
+                                   FontSize="15" 
+                                   FontWeight="SemiBold"/>
+                    </StackPanel>
+                </Button>
+
+                <StackPanel x:Name="ButtonsPanel" Grid.Row="1" Margin="0,0,0,10">
+                    <Button Style="{StaticResource MaterialDesignOutlinedButton}"
+                            Height="40" Margin="0,0,0,10"
+                            Click="EquipmentButton_Click">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <materialDesign:PackIcon Kind="Server" Width="22" Height="22" Margin="0,0,10,0"/>
+                            <TextBlock x:Name="EquipmentText" 
+                                       Text="{Binding Equipment}" 
+                                       FontSize="15" 
+                                       FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Style="{StaticResource MaterialDesignOutlinedButton}"
+                            Height="40" Margin="0,0,0,10"
+                            Click="EmployeesButton_Click">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <materialDesign:PackIcon Kind="AccountGroup" Width="22" Height="22" Margin="0,0,10,0"/>
+                            <TextBlock x:Name="EmployeesText" 
+                                       Text="{Binding Employees}" 
+                                       FontSize="15" 
+                                       FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Style="{StaticResource MaterialDesignOutlinedButton}"
+                            Height="40" Margin="0,0,0,10"
+                            Click="TasksButton_Click">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <materialDesign:PackIcon Kind="ClipboardList" Width="22" Height="22" Margin="0,0,10,0"/>
+                            <TextBlock x:Name="TasksText" 
+                                       Text="{Binding Tasks}" 
+                                       FontSize="15" 
+                                       FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </Button>
+                    <Button x:Name="StatisticsButton"
+                            Style="{StaticResource MaterialDesignOutlinedButton}"
+                            Height="40" Margin="0,0,0,10"
+                            Click="StatisticsButton_Click">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <materialDesign:PackIcon Kind="ChartBar" Width="22" Height="22" Margin="0,0,10,0"/>
+                            <TextBlock x:Name="StatisticsText" 
+                                       Text="{Binding Statistics}" 
+                                       FontSize="15" 
+                                       FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+
+                <Button Grid.Row="2"
+                        Width="53" Height="40"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        HorizontalAlignment="Left"
+                        Margin="0,0,0,14"
+                        Click="SettingsButton_Click"
+                        ToolTip="{Binding Settings}">
+                    <materialDesign:PackIcon Kind="Cog" Width="22" Height="22"/>
+                </Button>
+            </Grid>
+        </Border>
+
+        <Frame x:Name="MainFrame" Grid.Column="1" NavigationUIVisibility="Hidden"/>
+    </Grid>
+</Window>

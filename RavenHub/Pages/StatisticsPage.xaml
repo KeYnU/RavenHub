@@ -1,0 +1,78 @@
+﻿<Page x:Class="RavenHub.Pages.StatisticsPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+      Title="Статистика">
+
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Заголовок -->
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,20">
+            <materialDesign:PackIcon Kind="ChartBar" Width="32" Height="32" Margin="0,0,8,0"/>
+            <TextBlock Text="Статистика" 
+                       Style="{StaticResource MaterialDesignHeadline5TextBlock}"
+                       VerticalAlignment="Center"/>
+        </StackPanel>
+
+        <!-- Основное содержимое -->
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+                <!-- Продажи -->
+                <materialDesign:Card UniformCornerRadius="6" Margin="0,0,0,16">
+                    <StackPanel Margin="16">
+                        <StackPanel Orientation="Horizontal">
+                            <materialDesign:PackIcon Kind="Cash" Width="20" Height="20" Margin="0,0,8,0"/>
+                            <TextBlock Text="ПРОДАЖИ" 
+                                       Style="{StaticResource MaterialDesignCaptionTextBlock}"/>
+                        </StackPanel>
+                        <TextBlock Text="{Binding SoldBox}" 
+                                   Style="{StaticResource MaterialDesignHeadline4TextBlock}"
+                                   Margin="0,8,0,0"/>
+                        <ProgressBar Value="{Binding SoldProgress}" 
+                                     Height="8" Margin="0,16,0,0"/>
+                    </StackPanel>
+                </materialDesign:Card>
+
+                <!-- Поступления -->
+                <materialDesign:Card UniformCornerRadius="6" Margin="0,0,0,16">
+                    <StackPanel Margin="16">
+                        <StackPanel Orientation="Horizontal">
+                            <materialDesign:PackIcon Kind="PackageVariant" Width="20" Height="20" Margin="0,0,8,0"/>
+                            <TextBlock Text="ПОСТУПЛЕНИЯ" 
+                                       Style="{StaticResource MaterialDesignCaptionTextBlock}"/>
+                        </StackPanel>
+                        <TextBlock Text="{Binding GotBox}" 
+                                   Style="{StaticResource MaterialDesignHeadline4TextBlock}"
+                                   Margin="0,8,0,0"/>
+                        <ProgressBar Value="{Binding GotProgress}" 
+                                     Height="8" Margin="0,16,0,0"/>
+                    </StackPanel>
+                </materialDesign:Card>
+
+                <!-- Общая статистика -->
+                <materialDesign:Card UniformCornerRadius="6" Background="{DynamicResource SecondaryHueMidBrush}">
+                    <StackPanel Margin="16">
+                        <StackPanel Orientation="Horizontal">
+                            <materialDesign:PackIcon Kind="ChartPie" Width="20" Height="20" Margin="0,0,8,0"
+                                                     Foreground="{DynamicResource SecondaryHueMidForegroundBrush}"/>
+                            <TextBlock Text="ОБЩАЯ СТАТИСТИКА" 
+                                       Style="{StaticResource MaterialDesignCaptionTextBlock}"
+                                       Foreground="{DynamicResource SecondaryHueMidForegroundBrush}"/>
+                        </StackPanel>
+                        <TextBlock Text="{Binding OverallBox}" 
+                                   Style="{StaticResource MaterialDesignHeadline3TextBlock}"
+                                   Foreground="{DynamicResource SecondaryHueMidForegroundBrush}"
+                                   Margin="0,8,0,0"/>
+                        <ProgressBar Value="100" Height="8" Margin="0,16,0,0"
+                                     Background="{DynamicResource SecondaryHueMidForegroundBrush}"
+                                     Foreground="{DynamicResource SecondaryHueMidForegroundBrush}"/>
+                    </StackPanel>
+                </materialDesign:Card>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</Page>

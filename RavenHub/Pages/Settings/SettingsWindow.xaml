@@ -1,0 +1,27 @@
+﻿<Window x:Class="RavenHub.Pages.Settings.SettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Настройки" Height="300" Width="450"
+        WindowStartupLocation="CenterOwner">
+    <Grid Margin="16">
+        <StackPanel>
+            <!-- Язык -->
+            <TextBlock Text="{Binding LanguageLabel}" 
+                       Style="{StaticResource MaterialDesignSubtitle1TextBlock}"
+                       Margin="0,0,0,8"/>
+
+            <ComboBox x:Name="LanguageComboBox"
+                      Style="{StaticResource MaterialDesignFloatingHintComboBox}">
+                <ComboBoxItem Content="Русский" Tag="ru"/>
+                <ComboBoxItem Content="English" Tag="en"/>
+            </ComboBox>
+
+            <!-- Кнопка сохранить -->
+            <Button Content="✓"
+                    HorizontalAlignment="Right"
+                    Margin="0,24,0,0"
+                    Style="{StaticResource MaterialDesignRaisedButton}"
+                    Click="SaveButton_Click"/>
+        </StackPanel>
+    </Grid>
+</Window>

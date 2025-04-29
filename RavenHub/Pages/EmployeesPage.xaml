@@ -1,0 +1,94 @@
+﻿<Page x:Class="RavenHub.Pages.EmployeesPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+      xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+      xmlns:local="clr-namespace:RavenHub.Pages"
+      xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+      mc:Ignorable="d" 
+      d:DesignHeight="600" d:DesignWidth="900"
+      Title="Сотрудники">
+
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,20">
+            <materialDesign:PackIcon Kind="AccountGroup" Width="32" Height="32" Margin="0,0,8,0"/>
+            <TextBlock Text="Сотрудники" Style="{StaticResource MaterialDesignHeadline5TextBlock}"/>
+        </StackPanel>
+
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,20">
+            <TextBox x:Name="SearchBox" 
+                     Width="250"
+                     Margin="0,0,10,0"
+                     materialDesign:HintAssist.Hint="Поиск по ФИО"
+                     Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}">
+                <TextBox.InputBindings>
+                    <KeyBinding Key="Enter" Command="{Binding SearchCommand}"/>
+                </TextBox.InputBindings>
+            </TextBox>
+
+            <Button Command="{Binding AddEmployeeCommand}" 
+                    Style="{StaticResource MaterialDesignRaisedButton}"
+                    Margin="0,0,8,0">
+                <StackPanel Orientation="Horizontal">
+                    <materialDesign:PackIcon Kind="Plus" Width="20" Height="20" Margin="0,0,5,0"/>
+                    <TextBlock Text="Добавить"/>
+                </StackPanel>
+            </Button>
+
+            <Button Command="{Binding EditEmployeeCommand}" 
+                    Style="{StaticResource MaterialDesignOutlinedButton}"
+                    Margin="0,0,8,0"
+                    IsEnabled="{Binding HasSelectedEmployee}">
+                <StackPanel Orientation="Horizontal">
+                    <materialDesign:PackIcon Kind="Pencil" Width="20" Height="20" Margin="0,0,5,0"/>
+                    <TextBlock Text="Изменить"/>
+                </StackPanel>
+            </Button>
+
+            <Button Command="{Binding DeleteEmployeeCommand}" 
+                    Style="{StaticResource MaterialDesignOutlinedButton}"
+                    Margin="0,0,8,0"
+                    IsEnabled="{Binding HasSelectedEmployee}">
+                <StackPanel Orientation="Horizontal">
+                    <materialDesign:PackIcon Kind="Delete" Width="20" Height="20" Margin="0,0,5,0"/>
+                    <TextBlock Text="Удалить"/>
+                </StackPanel>
+            </Button>
+        </StackPanel>
+
+        <DataGrid Grid.Row="2" 
+                  x:Name="EmployeesDataGrid"
+                  ItemsSource="{Binding EmployeesTable.DefaultView}"
+                  SelectedItem="{Binding SelectedEmployee}"
+                  AutoGenerateColumns="False" 
+                  IsReadOnly="True"
+                  CanUserSortColumns="True">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="ФИО" Binding="{Binding FullName}" Width="*" CanUserSort="True"/>
+                <DataGridTextColumn Header="Должность" Binding="{Binding Position}" Width="150" CanUserSort="True"/>
+                <DataGridTextColumn Header="Телефон" Binding="{Binding PhoneNumber}" Width="150"/>
+                <DataGridTextColumn Header="Email" Binding="{Binding Email}" Width="*"/>
+
+                <DataGridTemplateColumn Header="Соцсети" Width="100">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <Button Command="{Binding DataContext.OpenSocialCommand, 
+                                    RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                    CommandParameter="{Binding}"
+                                    Style="{StaticResource MaterialDesignFlatButton}"
+                                    ToolTip="Открыть ссылку">
+                                <materialDesign:PackIcon Kind="Link" Width="20" Height="20"/>
+                            </Button>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+            </DataGrid.Columns>
+        </DataGrid>
+    </Grid>
+</Page>

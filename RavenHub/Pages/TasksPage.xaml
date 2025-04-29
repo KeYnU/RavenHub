@@ -1,0 +1,91 @@
+﻿<Page x:Class="RavenHub.Pages.TasksPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+      xmlns:local="clr-namespace:RavenHub.Pages"
+      Title="RavenHub - Задачи">
+
+    <Page.Resources>
+
+    </Page.Resources>
+
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Заголовок -->
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,20">
+            <materialDesign:PackIcon Kind="ClipboardList" Width="32" Height="32" Margin="0,0,8,0"/>
+            <TextBlock Text="Задачи" 
+                       Style="{StaticResource MaterialDesignHeadline5TextBlock}"
+                       VerticalAlignment="Center"/>
+        </StackPanel>
+
+        <!-- Список задач -->
+        <materialDesign:Card Grid.Row="1" UniformCornerRadius="6">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- Панель поиска и фильтров -->
+                <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="16,16,16,8">
+                    <TextBox x:Name="SearchBox" 
+                             materialDesign:HintAssist.Hint="Поиск задач"
+                             Width="250" 
+                             Margin="0,0,8,0"
+                             Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                             Style="{StaticResource MaterialDesignOutlinedTextBox}"/>
+                </StackPanel>
+
+                <!-- Таблица задач -->
+                <DataGrid Grid.Row="1" 
+                          x:Name="TasksDataGrid"
+                          ItemsSource="{Binding TasksTable.DefaultView}"
+                          SelectedItem="{Binding SelectedTask}"
+                          AutoGenerateColumns="False"
+                          CanUserAddRows="False"
+                          CanUserSortColumns="True"
+                          HeadersVisibility="Column"
+                          Margin="16,0"
+                          SelectionMode="Single"
+                          SelectionUnit="FullRow"
+                          IsReadOnly="True">
+                    <DataGrid.Columns>
+                        <DataGridTemplateColumn Header="Статус" Width="80">
+                            
+                        </DataGridTemplateColumn>
+                        <DataGridTextColumn Header="Название" Binding="{Binding Title}" Width="*"/>
+                        <DataGridTextColumn Header="Описание" Binding="{Binding Description}" Width="2*"/>
+                        <DataGridTextColumn Header="Срок" Binding="{Binding Deadline, StringFormat=dd.MM.yyyy}" Width="120"/>
+                        <DataGridCheckBoxColumn Header="Выполнено" Binding="{Binding IsCompleted}" Width="80"/>
+                    </DataGrid.Columns>
+                </DataGrid>
+
+                <!-- Кнопки управления -->
+                <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="16">
+                    <Button Content="СОЗДАТЬ"
+                            Command="{Binding CreateTaskCommand}"
+                            Style="{StaticResource MaterialDesignOutlinedButton}"
+                            Margin="0,0,8,0"/>
+
+                    <Button Content="РЕДАКТИРОВАТЬ"
+                            Command="{Binding EditTaskCommand}"
+                            Style="{StaticResource MaterialDesignOutlinedButton}"
+                            Margin="0,0,8,0"
+                            IsEnabled="{Binding HasSelectedTask}"/>
+
+                    <Button Content="УДАЛИТЬ"
+                            Command="{Binding DeleteTaskCommand}"
+                            Style="{StaticResource MaterialDesignOutlinedButton}"
+                            Margin="0,0,8,0"
+                            IsEnabled="{Binding HasSelectedTask}"/>
+                </StackPanel>
+            </Grid>
+        </materialDesign:Card>
+    </Grid>
+</Page>
