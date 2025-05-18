@@ -5,20 +5,21 @@
         xmlns:local="clr-namespace:RavenHub"
         Title="RavenHub"
         Height="640"
-        Width="900"
+        Width="950"
         ResizeMode="CanMinimize"
         WindowStyle="SingleBorderWindow"
         WindowStartupLocation="CenterScreen"
         Icon="/Images/RavenHub.jpg"
         Background="{DynamicResource MaterialDesignBackground}"
         FontSize="16">
+
     <Grid x:Name="MainGrid" DataContext="{x:Static local:LocaleManager.Instance}">
         <Grid.ColumnDefinitions>
             <ColumnDefinition x:Name="SidebarColumn" Width="80"/>
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
-        <!-- Кнопка переключения сайдбара - теперь сбоку по центру -->
+        <!-- Кнопка переключения сайдбара -->
         <Button x:Name="ToggleSidebarButton" 
                 Grid.Column="0"
                 HorizontalAlignment="Right" 
@@ -28,7 +29,7 @@
                 Style="{StaticResource MaterialDesignIconButton}"
                 Panel.ZIndex="1"
                 Click="ToggleSidebarButton_Click">
-            <materialDesign:PackIcon Kind="SwapHorizontal" Width="40" Height="40" />
+            <materialDesign:PackIcon Kind="SwapHorizontal" Width="40" Height="40"/>
         </Button>
 
         <Border x:Name="NavPanel" 
@@ -44,7 +45,7 @@
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
-                <!-- Вернули кнопку "Главная" -->
+                <!-- Кнопка "Главная" -->
                 <Button Grid.Row="0"
                         Style="{StaticResource MaterialDesignOutlinedButton}"
                         Height="40" Margin="0,0,0,10"
@@ -59,7 +60,8 @@
                 </Button>
 
                 <StackPanel x:Name="ButtonsPanel" Grid.Row="1" Margin="0,0,0,10">
-                    <Button Style="{StaticResource MaterialDesignOutlinedButton}"
+                    <Button x:Name="EquipmentButton"
+                            Style="{StaticResource MaterialDesignOutlinedButton}"
                             Height="40" Margin="0,0,0,10"
                             Click="EquipmentButton_Click">
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
@@ -70,7 +72,9 @@
                                        FontWeight="SemiBold"/>
                         </StackPanel>
                     </Button>
-                    <Button Style="{StaticResource MaterialDesignOutlinedButton}"
+
+                    <Button x:Name="EmployeesButton"
+                            Style="{StaticResource MaterialDesignOutlinedButton}"
                             Height="40" Margin="0,0,0,10"
                             Click="EmployeesButton_Click">
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
@@ -81,7 +85,9 @@
                                        FontWeight="SemiBold"/>
                         </StackPanel>
                     </Button>
-                    <Button Style="{StaticResource MaterialDesignOutlinedButton}"
+
+                    <Button x:Name="TasksButton"
+                            Style="{StaticResource MaterialDesignOutlinedButton}"
                             Height="40" Margin="0,0,0,10"
                             Click="TasksButton_Click">
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
@@ -92,6 +98,7 @@
                                        FontWeight="SemiBold"/>
                         </StackPanel>
                     </Button>
+
                     <Button x:Name="StatisticsButton"
                             Style="{StaticResource MaterialDesignOutlinedButton}"
                             Height="40" Margin="0,0,0,10"
@@ -106,19 +113,30 @@
                     </Button>
                 </StackPanel>
 
-                <Button Grid.Row="2"
-                        Width="53" Height="40"
-                        Background="Transparent"
-                        BorderThickness="0"
-                        HorizontalAlignment="Left"
-                        Margin="0,0,0,14"
-                        Click="SettingsButton_Click"
-                        ToolTip="{Binding Settings}">
-                    <materialDesign:PackIcon Kind="Cog" Width="22" Height="22"/>
-                </Button>
+                <!-- Нижние кнопки -->
+                <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="0,0,0,14">
+                    <Button Width="53" Height="40"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            Click="SettingsButton_Click"
+                            ToolTip="{Binding Settings}">
+                        <materialDesign:PackIcon Kind="Cog" Width="22" Height="22"/>
+                    </Button>
+                    <Button x:Name="LogoutButton"
+                            Width="53" Height="40"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            Click="LogoutButton_Click"
+                            ToolTip="Выйти из аккаунта">
+                        <materialDesign:PackIcon Kind="Logout" Width="22" Height="22"/>
+                    </Button>
+                </StackPanel>
             </Grid>
         </Border>
 
-        <Frame x:Name="MainFrame" Grid.Column="1" NavigationUIVisibility="Hidden"/>
+        <Frame x:Name="MainFrame" 
+               Grid.Column="1" 
+               NavigationUIVisibility="Hidden"
+               JournalOwnership="OwnsJournal"/>
     </Grid>
 </Window>

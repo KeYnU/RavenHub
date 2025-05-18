@@ -9,31 +9,36 @@
         AllowsTransparency="True"
         Height="450" 
         Width="400"
-        Background="Transparent">
+        Background="Transparent"
+        Loaded="Window_Loaded">
 
     <Window.Resources>
-        <Storyboard x:Key="ShowPasswordAnimation">
-            <DoubleAnimation Storyboard.TargetProperty="Opacity"
-                            From="0" To="1" Duration="0:0:0.2"/>
-            <DoubleAnimation Storyboard.TargetProperty="RenderTransform.ScaleX"
-                            From="0.98" To="1" Duration="0:0:0.2"/>
-            <DoubleAnimation Storyboard.TargetProperty="RenderTransform.ScaleY"
-                            From="0.98" To="1" Duration="0:0:0.2"/>
+        <!-- Анимация встряски -->
+        <Storyboard x:Key="ShakeAnimation">
+            <DoubleAnimationUsingKeyFrames Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.X)">
+                <EasingDoubleKeyFrame KeyTime="0:0:0.05" Value="-10"/>
+                <EasingDoubleKeyFrame KeyTime="0:0:0.10" Value="10"/>
+                <EasingDoubleKeyFrame KeyTime="0:0:0.15" Value="-8"/>
+                <EasingDoubleKeyFrame KeyTime="0:0:0.20" Value="8"/>
+                <EasingDoubleKeyFrame KeyTime="0:0:0.25" Value="-6"/>
+                <EasingDoubleKeyFrame KeyTime="0:0:0.30" Value="6"/>
+                <EasingDoubleKeyFrame KeyTime="0:0:0.35" Value="-4"/>
+                <EasingDoubleKeyFrame KeyTime="0:0:0.40" Value="4"/>
+                <EasingDoubleKeyFrame KeyTime="0:0:0.45" Value="-2"/>
+                <EasingDoubleKeyFrame KeyTime="0:0:0.50" Value="2"/>
+                <EasingDoubleKeyFrame KeyTime="0:0:0.55" Value="0"/>
+            </DoubleAnimationUsingKeyFrames>
         </Storyboard>
-        <Storyboard x:Key="HidePasswordAnimation">
-            <DoubleAnimation Storyboard.TargetProperty="Opacity"
-                            From="1" To="0" Duration="0:0:0.2"/>
-            <DoubleAnimation Storyboard.TargetProperty="RenderTransform.ScaleX"
-                            From="1" To="0.98" Duration="0:0:0.2"/>
-            <DoubleAnimation Storyboard.TargetProperty="RenderTransform.ScaleY"
-                            From="1" To="0.98" Duration="0:0:0.2"/>
-        </Storyboard>
+
+        <TranslateTransform x:Key="LoginTransform"/>
     </Window.Resources>
 
-    <Border CornerRadius="10" 
+    <Border x:Name="MainBorder"
+            CornerRadius="10"
             Background="{DynamicResource MaterialDesignBackground}"
             BorderBrush="{DynamicResource MaterialDesignDivider}"
-            BorderThickness="1">
+            BorderThickness="1"
+            RenderTransform="{StaticResource LoginTransform}">
 
         <Grid>
             <Grid.RowDefinitions>
@@ -41,26 +46,30 @@
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
 
-            <!-- Панель управления окном -->
+            <!-- Панель управления -->
             <Grid Grid.Row="0" Height="35">
-                <!-- Область для перетаскивания окна -->
                 <Grid Background="Transparent" MouseLeftButtonDown="DragWindow">
-                    <TextBlock Text="RavenHub" HorizontalAlignment="Center" VerticalAlignment="Center" 
-                              FontSize="14" FontWeight="Medium" Margin="0,8,0,0"/>
+                    <TextBlock Text="RavenHub" 
+                               HorizontalAlignment="Center" 
+                               VerticalAlignment="Center" 
+                               FontSize="14" 
+                               FontWeight="Medium" 
+                               Margin="0,8,0,0"/>
                 </Grid>
 
-                <!-- Кнопки управления окном -->
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,5,10,0">
-                    <!-- Кнопка сворачивания -->
-                    <Button x:Name="btnMinimize" Width="25" Height="25" 
+                    <Button x:Name="btnMinimize" 
+                            Width="25" 
+                            Height="25" 
                             Style="{StaticResource MaterialDesignFlatButton}"
-                            Padding="0" Margin="0,0,5,0"
+                            Padding="0" 
+                            Margin="0,0,5,0"
                             Click="btnMinimize_Click">
                         <materialDesign:PackIcon Kind="WindowMinimize" Width="16" Height="16"/>
                     </Button>
-
-                    <!-- Кнопка закрытия -->
-                    <Button x:Name="btnClose" Width="25" Height="25" 
+                    <Button x:Name="btnClose" 
+                            Width="25" 
+                            Height="25" 
                             Style="{StaticResource MaterialDesignFlatButton}"
                             Padding="0"
                             Click="btnClose_Click">
@@ -69,7 +78,7 @@
                 </StackPanel>
             </Grid>
 
-            <!-- Содержимое окна -->
+            <!-- Контент -->
             <StackPanel Grid.Row="1" VerticalAlignment="Center" Margin="20">
                 <materialDesign:PackIcon 
                     Kind="DesktopClassic" 
@@ -84,74 +93,61 @@
                           FontWeight="SemiBold"
                           Margin="0,0,0,30"/>
 
-                <TextBox 
-                    x:Name="txtUsername"
-                    Style="{StaticResource MaterialDesignFloatingHintTextBox}"
-                    materialDesign:HintAssist.Hint="Username"
-                    Margin="0,0,0,10"/>
+                <TextBox x:Name="txtUsername"
+                        Style="{StaticResource MaterialDesignFloatingHintTextBox}"
+                        materialDesign:HintAssist.Hint="Username"
+                        Margin="0,0,0,10"
+                        KeyDown="InputField_KeyDown"/>
 
-                <!-- Поле пароля с кнопкой переключения и анимацией -->
-                <Grid Margin="0,0,0,20">
+                <!-- Поле пароля -->
+                <Grid Margin="0,0,0,10">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
 
-                    <PasswordBox 
-                        x:Name="txtPassword"
-                        Style="{StaticResource MaterialDesignFloatingHintPasswordBox}"
-                        materialDesign:HintAssist.Hint="Password"
-                        Grid.Column="0"
-                        Opacity="1">
-                        <PasswordBox.RenderTransform>
-                            <ScaleTransform ScaleX="1" ScaleY="1"/>
-                        </PasswordBox.RenderTransform>
-                    </PasswordBox>
+                    <PasswordBox x:Name="txtPassword"
+                                Style="{StaticResource MaterialDesignFloatingHintPasswordBox}"
+                                materialDesign:HintAssist.Hint="Password"
+                                Grid.Column="0"
+                                VerticalContentAlignment="Center"
+                                KeyDown="InputField_KeyDown"/>
 
-                    <TextBox 
-                        x:Name="txtPasswordVisible"
-                        Style="{StaticResource MaterialDesignFloatingHintTextBox}"
-                        materialDesign:HintAssist.Hint="Password"
-                        Grid.Column="0"
-                        Visibility="Collapsed"
-                        Opacity="0">
-                        <TextBox.RenderTransform>
-                            <ScaleTransform ScaleX="1" ScaleY="1"/>
-                        </TextBox.RenderTransform>
-                    </TextBox>
+                    <TextBox x:Name="txtPasswordVisible"
+                            Style="{StaticResource MaterialDesignFloatingHintTextBox}"
+                            materialDesign:HintAssist.Hint="Password"
+                            Grid.Column="0"
+                            VerticalContentAlignment="Center"
+                            Visibility="Collapsed"
+                            KeyDown="InputField_KeyDown"/>
 
-                    <Button 
-                        x:Name="btnTogglePassword"
-                        Grid.Column="1"
-                        Style="{StaticResource MaterialDesignIconButton}"
-                        Margin="4,0,0,0"
-                        Click="TogglePasswordVisibility"
-                        materialDesign:ButtonAssist.CornerRadius="2"
-                        VerticalAlignment="Bottom"
-                        Height="{Binding ActualHeight, ElementName=txtPassword}"
-                        ToolTip="Show password">
-                        <materialDesign:PackIcon 
-                            Kind="EyeOutline" 
-                            Width="20"
-                            Height="20"/>
+                    <Button x:Name="btnTogglePassword"
+                            Grid.Column="1"
+                            Style="{StaticResource MaterialDesignIconButton}"
+                            Margin="0,0,0,0"
+                            VerticalAlignment="Center"
+                            Click="btnTogglePassword_Click"
+                            ToolTip="Show password">
+                        <materialDesign:PackIcon x:Name="eyeIcon" Kind="EyeOutline" Width="20" Height="20"/>
                     </Button>
                 </Grid>
 
-                <Button 
-                    Content="Login"
-                    Style="{StaticResource MaterialDesignRaisedButton}"
-                    Padding="15,5"
-                    HorizontalAlignment="Stretch"
-                    Click="Button_Click"
-                    Margin="0,0,0,10" Width="85"/>
+                <Button x:Name="btnLogin"
+                        Content="Log in"
+                        Style="{StaticResource MaterialDesignRaisedButton}"
+                        Padding="15,5"
+                        HorizontalAlignment="Stretch"
+                        Click="btnLogin_Click"
+                        KeyDown="btnLogin_KeyDown"
+                        Margin="0,0,0,10"/>
 
-                <Button 
-                    Content="Sign in"
-                    Style="{StaticResource MaterialDesignRaisedButton}"
-                    Background="DimGray"
-                    Foreground="White"
-                    HorizontalAlignment="Center"
-                    Click="RegisterButton_Click" Cursor="Hand"/>
+                <Button x:Name="btnRegister"
+                        Content="Register"
+                        Style="{StaticResource MaterialDesignRaisedButton}"
+                        Background="DimGray"
+                        Foreground="White"
+                        HorizontalAlignment="Center"
+                        Click="btnRegister_Click"/>
             </StackPanel>
         </Grid>
     </Border>

@@ -2,85 +2,90 @@
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media.Animation;
+using System.Threading.Tasks;
 
 namespace RavenHub
 {
     public partial class RegisterWindow : Window
     {
+        private readonly UserRepository _userRepository;
+
         public RegisterWindow()
         {
             InitializeComponent();
+            _userRepository = new UserRepository(App.DbService);
 
-            // Устанавливаем начальную прозрачность окна в 0
+            // Инициализация обработчиков событий
+            RegisterButton.Click += RegisterButton_Click;
+            CancelButton.Click += CancelButton_Click;
+            btnClose.Click += btnClose_Click;
+            btnMinimize.Click += btnMinimize_Click;
+
+            // Анимация плавного появления
             Opacity = 0;
-
-            // Создаём анимацию появления
             DoubleAnimation fadeInAnimation = new DoubleAnimation
             {
                 From = 0,
                 To = 1,
-                Duration = TimeSpan.FromSeconds(0.5) // Анимация длится 0.5 секунды
+                Duration = TimeSpan.FromSeconds(0.5)
             };
-
-            // Применяем анимацию к свойству Opacity
             BeginAnimation(OpacityProperty, fadeInAnimation);
 
-            // Фокус на поле ввода логина при открытии
             Loaded += (sender, e) => txtUsername.Focus();
         }
 
-        private void RegisterButton_Click(object sender, RoutedEventArgs e)
+        private async void RegisterButton_Click(object sender, RoutedEventArgs e)
         {
             string login = txtUsername.Text.Trim();
             string password = txtPassword.Password;
 
-            // Проверка длины логина
+            // Валидация
             if (login.Length < 4)
             {
-                MessageBox.Show("Логин должен содержать минимум 4 символа.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show("Логин должен содержать минимум 4 символа", "Ошибка",
+                              MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
 
-            // Проверка длины пароля
             if (password.Length < 8)
             {
-                MessageBox.Show("Пароль должен содержать минимум 8 символов.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show("Пароль должен содержать минимум 8 символов", "Ошибка",
+                              MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
 
-            var userRepository = new UserRepository();
-            if (userRepository.UserExists(login))
+            try
             {
-                MessageBox.Show("Пользователь с таким логином уже существует.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                return;
+                if (await _userRepository.UserExistsAsync(login))
+                {
+                    MessageBox.Show("Пользователь с таким логином уже существует", "Ошибка",
+                                  MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
+
+                if (await _userRepository.RegisterUserAsync(login, password))
+                {
+                    MessageBox.Show("Регистрация успешно завершена", "Успех",
+                                  MessageBoxButton.OK, MessageBoxImage.Information);
+                    Close();
+                }
             }
-
-            userRepository.RegisterUser(login, password, false);
-            MessageBox.Show("Пользователь успешно зарегистрирован.", "Готово", MessageBoxButton.OK, MessageBoxImage.Information);
-            Close();
-        }
-
-        private void CancelButton_Click(object sender, RoutedEventArgs e)
-        {
-            Close();
-        }
-
-        private void btnClose_Click(object sender, RoutedEventArgs e)
-        {
-            Close();
-        }
-
-        private void btnMinimize_Click(object sender, RoutedEventArgs e)
-        {
-            WindowState = WindowState.Minimized;
-        }
-
-        private void DragWindow(object sender, MouseButtonEventArgs e)
-        {
-            if (e.ChangedButton == MouseButton.Left)
+            catch (Exception ex)
             {
-                DragMove();
+                MessageBox.Show($"Ошибка регистрации: {ex.Message}", "Ошибка",
+                              MessageBoxButton.OK, MessageBoxImage.Error);
             }
+        }
+
+        private void CancelButton_Click(object sender, RoutedEventArgs e) => Close();
+        private void btnClose_Click(object sender, RoutedEventArgs e) => Close();
+        private void btnMinimize_Click(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
+        private void DragWindow(object sender, MouseButtonEventArgs e) => DragMove();
+
+        protected override void OnClosed(EventArgs e)
+        {
+            base.OnClosed(e);
+            _userRepository.Dispose();
         }
     }
 }

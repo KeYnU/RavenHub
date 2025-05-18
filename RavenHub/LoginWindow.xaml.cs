@@ -1,141 +1,157 @@
-﻿using System.Windows;
+﻿using System;
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media.Animation;
 using MaterialDesignThemes.Wpf;
+using System.Threading.Tasks;
 
 namespace RavenHub
 {
     public partial class LoginWindow : Window
     {
         private readonly UserRepository _userRepository;
+        private bool _isAnimating;
+        private bool _passwordVisible;
 
         public LoginWindow()
         {
             InitializeComponent();
-            _userRepository = new UserRepository();
-
-            txtPassword.KeyDown += (sender, e) =>
-            {
-                if (e.Key == Key.Enter) AttemptLogin();
-            };
-
-            txtPasswordVisible.KeyDown += (sender, e) =>
-            {
-                if (e.Key == Key.Enter) AttemptLogin();
-            };
-
-            Loaded += (sender, e) => txtUsername.Focus();
+            _userRepository = new UserRepository(App.DbService);
+            _passwordVisible = false;
+            UpdatePasswordVisibility();
+            this.Loaded += Window_Loaded; // Добавляем обработчик загрузки окна
         }
 
-        private void AttemptLogin()
+        private void Window_Loaded(object sender, RoutedEventArgs e)
         {
-            string username = txtUsername.Text.Trim();
-            string password = txtPassword.Visibility == Visibility.Visible
-                ? txtPassword.Password
-                : txtPasswordVisible.Text;
+            // Устанавливаем фокус на поле логина при загрузке
+            txtUsername.Focus();
+        }
 
-            if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
+        private async void btnLogin_Click(object sender, RoutedEventArgs e)
+        {
+            await AttemptLogin();
+        }
+
+        private async void btnLogin_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter)
             {
-                MessageBox.Show("Please enter both username and password.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                await AttemptLogin();
+            }
+        }
+
+        private void InputField_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter)
+            {
+                AttemptLogin().ConfigureAwait(false);
+            }
+        }
+
+        private async Task AttemptLogin()
+        {
+            if (_isAnimating) return;
+
+            string username = txtUsername.Text?.Trim() ?? "";
+            string password = _passwordVisible ? txtPasswordVisible.Text : txtPassword.Password;
+
+            if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password))
+            {
+                ShowError("Введите логин и пароль");
                 return;
             }
 
-            var (isAuthenticated, isAdmin) = _userRepository.VerifyUser(username, password);
-            if (isAuthenticated)
+            try
             {
-                new MainWindow
+                var (isAuthenticated, isAdmin) = await _userRepository.VerifyUserAsync(username, password);
+
+                if (isAuthenticated)
                 {
-                    IsAdmin = isAdmin,
-                    Username = username
-                }.Show();
-                this.Close();
+                    Dispatcher.Invoke(() =>
+                    {
+                        var mainWindow = new MainWindow
+                        {
+                            Username = username,
+                            IsAdmin = isAdmin
+                        };
+                        Application.Current.MainWindow = mainWindow;
+                        this.Close();
+                        mainWindow.Show();
+                    });
+                }
+                else
+                {
+                    ShowError("Неверный логин или пароль");
+                }
             }
-            else
+            catch (Exception ex)
             {
-                MessageBox.Show("Invalid username or password.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                Logger.Log(ex, "Ошибка входа");
+                ShowError("Ошибка сервера");
             }
         }
 
-        private async void TogglePasswordVisibility(object sender, RoutedEventArgs e)
+        private void ShowError(string message)
         {
-            var button = sender as Button;
-            if (button == null) return;
+            if (_isAnimating) return;
 
-            if (txtPasswordVisible.Visibility == Visibility.Visible)
+            _isAnimating = true;
+            var shakeAnimation = (Storyboard)FindResource("ShakeAnimation");
+            shakeAnimation.Completed += (s, e) => _isAnimating = false;
+            shakeAnimation.Begin(MainBorder);
+
+            MessageBox.Show(message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+
+        private void btnTogglePassword_Click(object sender, RoutedEventArgs e)
+        {
+            _passwordVisible = !_passwordVisible;
+            UpdatePasswordVisibility();
+        }
+
+        private void UpdatePasswordVisibility()
+        {
+            if (_passwordVisible)
             {
-                var hideAnimation = (Storyboard)FindResource("HidePasswordAnimation");
-                hideAnimation.Completed += (s, _) =>
-                {
-                    txtPasswordVisible.Visibility = Visibility.Collapsed;
-                    txtPassword.Visibility = Visibility.Visible;
-                    txtPassword.Password = txtPasswordVisible.Text;
-
-                    var showAnimation = (Storyboard)FindResource("ShowPasswordAnimation");
-                    showAnimation.Begin(txtPassword);
-                };
-                hideAnimation.Begin(txtPasswordVisible);
-            }
-            else
-            {
-                var hideAnimation = (Storyboard)FindResource("HidePasswordAnimation");
-                hideAnimation.Completed += (s, _) =>
-                {
-                    txtPassword.Visibility = Visibility.Collapsed;
-                    txtPasswordVisible.Visibility = Visibility.Visible;
-                    txtPasswordVisible.Text = txtPassword.Password;
-
-                    // Анимация появления текстового поля
-                    var showAnimation = (Storyboard)FindResource("ShowPasswordAnimation");
-                    showAnimation.Begin(txtPasswordVisible);
-                };
-                hideAnimation.Begin(txtPassword);
-            }
-
-            // Меняем иконку и подсказку
-            var icon = (PackIcon)button.Content;
-            icon.Kind = icon.Kind == PackIconKind.EyeOutline
-                ? PackIconKind.EyeOffOutline
-                : PackIconKind.EyeOutline;
-
-            button.ToolTip = icon.Kind == PackIconKind.EyeOutline
-                ? "Show password"
-                : "Hide password";
-
-            // Фокусируем активное поле
-            await System.Threading.Tasks.Task.Delay(200); // Ждем завершения анимации
-            if (txtPasswordVisible.Visibility == Visibility.Visible)
+                txtPasswordVisible.Text = txtPassword.Password;
+                txtPassword.Visibility = Visibility.Collapsed;
+                txtPasswordVisible.Visibility = Visibility.Visible;
+                ((PackIcon)btnTogglePassword.Content).Kind = PackIconKind.EyeOffOutline;
+                btnTogglePassword.ToolTip = "Скрыть пароль";
                 txtPasswordVisible.Focus();
+            }
             else
-                txtPassword.Focus();
-        }
-
-        private void btnClose_Click(object sender, RoutedEventArgs e)
-        {
-            this.Close();
-        }
-
-        private void btnMinimize_Click(object sender, RoutedEventArgs e)
-        {
-            this.WindowState = WindowState.Minimized;
-        }
-
-        private void DragWindow(object sender, MouseButtonEventArgs e)
-        {
-            if (e.ChangedButton == MouseButton.Left)
             {
-                this.DragMove();
+                txtPassword.Password = txtPasswordVisible.Text;
+                txtPasswordVisible.Visibility = Visibility.Collapsed;
+                txtPassword.Visibility = Visibility.Visible;
+                ((PackIcon)btnTogglePassword.Content).Kind = PackIconKind.EyeOutline;
+                btnTogglePassword.ToolTip = "Показать пароль";
+                txtPassword.Focus();
             }
         }
 
-        private void Button_Click(object sender, RoutedEventArgs e)
+        private void btnClose_Click(object sender, RoutedEventArgs e) => Application.Current.Shutdown();
+        private void btnMinimize_Click(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
+        private void DragWindow(object sender, MouseButtonEventArgs e) => DragMove();
+
+        protected override void OnClosed(EventArgs e)
         {
-            AttemptLogin();
+            _userRepository?.Dispose();
+            base.OnClosed(e);
         }
 
-        private void RegisterButton_Click(object sender, RoutedEventArgs e)
-        {
-            new RegisterWindow { Owner = this }.ShowDialog();
+        private void btnRegister_Click(object sender, RoutedEventArgs e)
+        {          
+            var registerWindow = new RegisterWindow();
+            this.Hide();
+
+            registerWindow.ShowDialog();
+
+            this.Show();
+            txtUsername.Focus();
         }
     }
 }

@@ -1,0 +1,7 @@
+для того чтобы отключить бд полностью
+USE master;
+ALTER DATABASE RavenHub SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+
+для того чтобы вернуть его к жизни
+USE master;
+ALTER DATABASE RavenHub SET MULTI_USER;

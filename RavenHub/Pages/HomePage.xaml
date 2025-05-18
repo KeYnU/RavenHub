@@ -10,7 +10,6 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- Заголовок с иконкой -->
         <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,20">
             <materialDesign:PackIcon Kind="Home" Width="32" Height="32" Margin="0,0,8,0"/>
             <TextBlock Text="Главная" 
@@ -18,23 +17,31 @@
                        VerticalAlignment="Center"/>
         </StackPanel>
 
-        <!-- Секция контента -->
+        <!-- Основной контент -->
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="0.4*"/>
             </Grid.ColumnDefinitions>
 
-            <!-- Приветственный текст слева -->
-            <TextBlock Grid.Column="0" 
+            <!-- Приветственный текст -->
+            <TextBlock x:Name="WelcomeText" Grid.Column="0" 
                        Margin="0,0,20,0" 
                        TextWrapping="Wrap"
                        MaxWidth="600"
                        VerticalAlignment="Center"
                        Style="{StaticResource MaterialDesignBody1TextBlock}">
-                <Run Text="Добро пожаловать в RavenHub!" FontWeight="Bold" FontSize="30"/><LineBreak/>
+                <Run x:Name="UserNameRun" FontWeight="Bold" FontSize="30"/><LineBreak/>
                 <Run Text="Погрузитесь в мир современных технологий! У нас вы найдете новейшие гаджеты для работы, развлечений и творчества. RavenHub — ваш проводник в будущее!" FontSize="16"/>
             </TextBlock>
+            
+            <Button Content="Инструкция по использованию"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Bottom"
+                    Click="Button_Click"
+                    Margin="0,0,0,20"/>
+
+            <!-- Изображение -->
             <Image Grid.Column="1" 
                    Source="/Images/for_homepage.jpg" 
                    Stretch="Uniform" 

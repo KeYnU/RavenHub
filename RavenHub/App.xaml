@@ -3,7 +3,8 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
              xmlns:local="clr-namespace:RavenHub"
-             Startup="App_OnStartup">
+             Startup="App_OnStartup"
+             ShutdownMode="OnExplicitShutdown">
     <Application.Resources>
         <ResourceDictionary>
             <local:LocaleManager x:Key="Locale" xmlns:local="clr-namespace:RavenHub"/>

@@ -1,20 +1,31 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Data;
 using System.Data.SqlClient;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
+using Microsoft.Win32;
+using DocumentFormat.OpenXml;
+using DocumentFormat.OpenXml.Packaging;
+using DocumentFormat.OpenXml.Wordprocessing;
+using WpfFrame = System.Windows.Controls.Frame;
 
 namespace RavenHub.Pages
 {
-    public partial class EmployeesPage : Page, INotifyPropertyChanged
+    public partial class EmployeesPage : Page, INotifyPropertyChanged, IDisposable
     {
-        private string connectionString = @"Data Source=LAPTOP-REGTVFN9; Initial Catalog=RavenHub; Integrated Security=True;";
+        public WpfFrame NavigationFrame { get; }
+        public string Username { get; }
+        public bool IsAdmin { get; }
+
+        private string connectionString = @"Data Source=.; Initial Catalog=RavenHub; Integrated Security=True;";
         private DataTable _employeesTable;
         private DataRowView _selectedEmployee;
         private string _searchText;
@@ -41,9 +52,12 @@ namespace RavenHub.Pages
             get => _searchText;
             set
             {
-                _searchText = value;
-                OnPropertyChanged(nameof(SearchText));
-                FilterEmployees();
+                if (_searchText != value)
+                {
+                    _searchText = value;
+                    OnPropertyChanged(nameof(SearchText));
+                    FilterEmployees();
+                }
             }
         }
 
@@ -54,19 +68,38 @@ namespace RavenHub.Pages
         public ICommand DeleteEmployeeCommand { get; }
         public ICommand OpenSocialCommand { get; }
         public ICommand SearchCommand { get; }
+        public ICommand ExportToCsvCommand { get; }
+        public ICommand ExportToDocxCommand { get; }
+
+        public event PropertyChangedEventHandler PropertyChanged;
 
         public EmployeesPage()
         {
             InitializeComponent();
             DataContext = this;
 
-            AddEmployeeCommand = new RelayCommand(AddEmployee);
-            EditEmployeeCommand = new RelayCommand(EditEmployee, _ => HasSelectedEmployee);
-            DeleteEmployeeCommand = new RelayCommand(DeleteEmployee, _ => HasSelectedEmployee);
-            OpenSocialCommand = new RelayCommand(OpenSocial);
+            AddEmployeeCommand = new RelayCommand(_ => AddEmployee());
+            EditEmployeeCommand = new RelayCommand(_ => EditEmployee(), _ => HasSelectedEmployee);
+            DeleteEmployeeCommand = new RelayCommand(_ => DeleteEmployee(), _ => HasSelectedEmployee);
+            OpenSocialCommand = new RelayCommand(parameter => OpenSocial(parameter));
             SearchCommand = new RelayCommand(_ => FilterEmployees());
+            ExportToCsvCommand = new RelayCommand(_ => ExportToCsv());
+            ExportToDocxCommand = new RelayCommand(_ => ExportToDocx(), _ => IsAdmin);
 
             LoadData();
+        }
+
+        public EmployeesPage(WpfFrame navigationFrame, string username, bool isAdmin)
+            : this()
+        {
+            NavigationFrame = navigationFrame;
+            Username = username;
+            IsAdmin = isAdmin;
+        }
+
+        protected virtual void OnPropertyChanged(string propertyName)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
 
         private void LoadData()
@@ -107,7 +140,7 @@ namespace RavenHub.Pages
             }
         }
 
-        private void AddEmployee(object parameter)
+        private void AddEmployee()
         {
             var positions = new ObservableCollection<string>();
             using (SqlConnection connection = new SqlConnection(connectionString))
@@ -160,7 +193,7 @@ namespace RavenHub.Pages
             }
         }
 
-        private void EditEmployee(object parameter)
+        private void EditEmployee()
         {
             if (SelectedEmployee == null) return;
 
@@ -178,7 +211,7 @@ namespace RavenHub.Pages
                 }
             }
 
-            var employeeData = new System.Collections.Generic.Dictionary<string, string>
+            var employeeData = new Dictionary<string, string>
             {
                 { "Id", SelectedEmployee["EmployeeId"].ToString() },
                 { "FullName", SelectedEmployee["FullName"].ToString() },
@@ -216,9 +249,11 @@ namespace RavenHub.Pages
             }
         }
 
-        private void DeleteEmployee(object parameter)
+        private void DeleteEmployee()
         {
-            if (MessageBox.Show("Удалить сотрудника?", "Подтверждение", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+            if (SelectedEmployee == null) return;
+
+            if (MessageBox.Show("Удалить сотрудника?", "Подтверждение", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
             {
                 SelectedEmployee.Row.Delete();
                 using (SqlConnection connection = new SqlConnection(connectionString))
@@ -250,13 +285,256 @@ namespace RavenHub.Pages
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show($"Ошибка при открытии ссылки: {ex.Message}", "Ошибка", MessageBoxButton.OK);
+                    MessageBox.Show($"Ошибка при открытии ссылки: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
         }
 
-        public event PropertyChangedEventHandler PropertyChanged;
-        protected void OnPropertyChanged(string name) =>
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+        private void ExportToCsv()
+        {
+            var saveFileDialog = new SaveFileDialog
+            {
+                Filter = "CSV files (*.csv)|*.csv|All files (*.*)|*.*",
+                FileName = "Сотрудники.csv",
+                DefaultExt = ".csv"
+            };
+
+            if (saveFileDialog.ShowDialog() == true)
+            {
+                try
+                {
+                    var currentView = EmployeesTable.DefaultView;
+
+                    using (var writer = new StreamWriter(saveFileDialog.FileName, false, System.Text.Encoding.UTF8))
+                    {
+                        var headers = EmployeesTable.Columns
+                            .Cast<DataColumn>()
+                            .Where(c => c.ColumnName != "PositionId" && c.ColumnName != "CreatedAt")
+                            .Select(c => c.ColumnName);
+                        writer.WriteLine(string.Join(";", headers));
+
+                        foreach (DataRowView rowView in currentView)
+                        {
+                            var row = rowView.Row;
+                            var values = new List<string>();
+                            foreach (DataColumn col in EmployeesTable.Columns)
+                            {
+                                if (col.ColumnName != "PositionId" && col.ColumnName != "CreatedAt")
+                                {
+                                    var value = row[col].ToString();
+                                    if (value.Contains(";") || value.Contains("\"") || value.Contains("\n"))
+                                    {
+                                        value = $"\"{value.Replace("\"", "\"\"")}\"";
+                                    }
+                                    values.Add(value);
+                                }
+                            }
+                            writer.WriteLine(string.Join(";", values));
+                        }
+                    }
+
+                    MessageBox.Show("Экспорт завершен успешно!", "Успех", MessageBoxButton.OK, MessageBoxImage.Information);
+
+                    if (MessageBox.Show("Открыть экспортированный файл?", "Открыть файл",
+                        MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
+                    {
+                        Process.Start(new ProcessStartInfo
+                        {
+                            FileName = saveFileDialog.FileName,
+                            UseShellExecute = true
+                        });
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Ошибка при экспорте: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
+        }
+
+        private void ExportToDocx()
+        {
+            var saveFileDialog = new SaveFileDialog
+            {
+                Filter = "Word Documents (*.docx)|*.docx",
+                FileName = "Сотрудники_" + DateTime.Now.ToString("yyyyMMdd") + ".docx"
+            };
+
+            if (saveFileDialog.ShowDialog() == true)
+            {
+                try
+                {
+                    using (var document = WordprocessingDocument.Create(saveFileDialog.FileName, WordprocessingDocumentType.Document))
+                    {
+                        // Основная часть документа
+                        var mainPart = document.AddMainDocumentPart();
+                        mainPart.Document = new Document();
+                        var body = mainPart.Document.AppendChild(new Body());
+
+                        // Настройки страницы
+                        var sectionProps = new SectionProperties(
+                            new PageMargin()
+                            {
+                                Top = 1000,
+                                Bottom = 1000,
+                                Left = 1000,
+                                Right = 1000
+                            });
+                        body.AppendChild(sectionProps);
+
+                        // Заголовок документа
+                        var title = new Paragraph(
+                            new ParagraphProperties(
+                                new Justification() { Val = JustificationValues.Center },
+                                new SpacingBetweenLines() { After = "200" }
+                            ),
+                            new Run(
+                                new RunProperties(
+                                    new FontSize() { Val = "28" },
+                                    new Bold()
+                                ),
+                                new Text("Список сотрудников")
+                            )
+                        );
+                        body.AppendChild(title);
+
+                        // Дата экспорта
+                        var date = new Paragraph(
+                            new ParagraphProperties(
+                                new Justification() { Val = JustificationValues.Right },
+                                new SpacingBetweenLines() { After = "200" }
+                            ),
+                            new Run(
+                                new RunProperties(
+                                    new FontSize() { Val = "14" }
+                                ),
+                                new Text($"Дата экспорта: {DateTime.Now:dd.MM.yyyy HH:mm}")
+                            )
+                        );
+                        body.AppendChild(date);
+
+                        // Создаем таблицу с автоматическим подбором ширины
+                        var table = new Table();
+
+                        // Настройки таблицы (автоматическая ширина)
+                        var tableProperties = new TableProperties(
+                            new TableBorders(
+                                new TopBorder() { Val = BorderValues.Single, Size = 4 },
+                                new BottomBorder() { Val = BorderValues.Single, Size = 4 },
+                                new LeftBorder() { Val = BorderValues.Single, Size = 4 },
+                                new RightBorder() { Val = BorderValues.Single, Size = 4 },
+                                new InsideHorizontalBorder() { Val = BorderValues.Single, Size = 2 },
+                                new InsideVerticalBorder() { Val = BorderValues.Single, Size = 2 }
+                            ),
+                            new TableWidth() { Width = "100%", Type = TableWidthUnitValues.Pct },
+                            new TableLayout() { Type = TableLayoutValues.Autofit }
+                        );
+                        table.AppendChild(tableProperties);
+
+                        // Заголовки таблицы
+                        var headerRow = new TableRow();
+
+                        // Ширина колонок в процентах
+                        string[] headers = { "ФИО (30%)", "Должность (20%)", "Телефон (15%)", "Email (20%)", "Соцсети (15%)" };
+                        int[] widths = { 30, 20, 15, 20, 15 };
+
+                        for (int i = 0; i < headers.Length; i++)
+                        {
+                            var cell = new TableCell(
+                                new TableCellProperties(
+                                    new TableCellWidth() { Type = TableWidthUnitValues.Pct, Width = (widths[i] * 50).ToString() }
+                                ),
+                                new Paragraph(
+                                    new ParagraphProperties(
+                                        new Justification() { Val = JustificationValues.Center }
+                                    ),
+                                    new Run(
+                                        new RunProperties(new Bold()),
+                                        new Text(headers[i].Split(' ')[0])
+                                    )
+                                )
+                            );
+                            headerRow.AppendChild(cell);
+                        }
+                        table.AppendChild(headerRow);
+
+                        // Данные сотрудников
+                        foreach (DataRowView rowView in EmployeesTable.DefaultView)
+                        {
+                            var row = rowView.Row;
+                            var dataRow = new TableRow();
+
+                            // Создаем ячейки с данными
+                            var cellsData = new[]
+                            {
+                        new { Value = row["FullName"]?.ToString() ?? "", Width = widths[0] },
+                        new { Value = row["Position"]?.ToString() ?? "", Width = widths[1] },
+                        new { Value = FormatPhoneNumber(row["PhoneNumber"]?.ToString()), Width = widths[2] },
+                        new { Value = row["Email"]?.ToString() ?? "", Width = widths[3] },
+                        new { Value = FormatSocialLink(row["SocialLink"]?.ToString()), Width = widths[4] }
+                    };
+
+                            foreach (var cellData in cellsData)
+                            {
+                                var cell = new TableCell(
+                                    new TableCellProperties(
+                                        new TableCellWidth() { Type = TableWidthUnitValues.Pct, Width = (cellData.Width * 50).ToString() },
+                                        new VerticalMerge() { Val = MergedCellValues.Restart }
+                                    ),
+                                    new Paragraph(
+                                        new Run(
+                                            new Text(cellData.Value)
+                                        )
+                                    )
+                                );
+                                dataRow.AppendChild(cell);
+                            }
+
+                            table.AppendChild(dataRow);
+                        }
+
+                        body.AppendChild(table);
+                    }
+
+                    MessageBox.Show("Документ успешно экспортирован!", "Готово",
+                        MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Ошибка при экспорте: {ex.Message}", "Ошибка",
+                        MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
+        }
+
+        // Форматирование телефонного номера
+        private string FormatPhoneNumber(string phone)
+        {
+            if (string.IsNullOrEmpty(phone)) return "";
+
+            // Удаляем все нецифровые символы
+            var digits = new string(phone.Where(char.IsDigit).ToArray());
+
+            if (digits.Length == 11) // Российский номер
+            {
+                return $"+7 ({digits.Substring(1, 3)}) {digits.Substring(4, 3)}-{digits.Substring(7, 2)}-{digits.Substring(9)}";
+            }
+
+            return phone; // Возвращаем как есть, если формат не распознан
+        }
+
+        // Форматирование ссылки на соцсети
+        private string FormatSocialLink(string link)
+        {
+            if (string.IsNullOrEmpty(link)) return "";
+
+            // Убираем "http://" или "https://" для краткости
+            return link.Replace("https://", "").Replace("http://", "");
+        }
+
+        public void Dispose()
+        {
+            EmployeesTable?.Dispose();
+        }
     }
 }

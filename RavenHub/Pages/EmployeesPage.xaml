@@ -10,6 +10,22 @@
       Title="Сотрудники">
 
     <Grid Margin="16">
+        <Grid.Resources>
+            <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+            <Style TargetType="DataGridCell" BasedOn="{StaticResource MaterialDesignDataGridCell}">
+                <Setter Property="Padding" Value="8"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="DataGridCell">
+                            <Grid Background="{TemplateBinding Background}">
+                                <ContentPresenter VerticalAlignment="Center" />
+                            </Grid>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+        </Grid.Resources>
+
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
@@ -32,9 +48,31 @@
                 </TextBox.InputBindings>
             </TextBox>
 
+            <Button Command="{Binding ExportToCsvCommand}" 
+                    Style="{StaticResource MaterialDesignOutlinedButton}"
+                    Margin="0,0,8,0"
+                    ToolTip="Экспорт в CSV">
+                <StackPanel Orientation="Horizontal">
+                    <materialDesign:PackIcon Kind="FileExcel" Width="20" Height="20" Margin="0,0,5,0"/>
+                    <TextBlock Text="CSV"/>
+                </StackPanel>
+            </Button>
+
+            <Button Command="{Binding ExportToDocxCommand}" 
+                    Style="{StaticResource MaterialDesignOutlinedButton}"
+                    Margin="0,0,8,0"
+                    ToolTip="Экспорт в Word"
+                    Visibility="{Binding IsAdmin, Converter={StaticResource BoolToVis}}">
+                <StackPanel Orientation="Horizontal">
+                    <materialDesign:PackIcon Kind="FileWord" Width="20" Height="20" Margin="0,0,5,0"/>
+                    <TextBlock Text="Word"/>
+                </StackPanel>
+            </Button>
+
             <Button Command="{Binding AddEmployeeCommand}" 
                     Style="{StaticResource MaterialDesignRaisedButton}"
-                    Margin="0,0,8,0">
+                    Margin="0,0,8,0"
+                    Visibility="{Binding IsAdmin, Converter={StaticResource BoolToVis}}">
                 <StackPanel Orientation="Horizontal">
                     <materialDesign:PackIcon Kind="Plus" Width="20" Height="20" Margin="0,0,5,0"/>
                     <TextBlock Text="Добавить"/>
@@ -44,7 +82,8 @@
             <Button Command="{Binding EditEmployeeCommand}" 
                     Style="{StaticResource MaterialDesignOutlinedButton}"
                     Margin="0,0,8,0"
-                    IsEnabled="{Binding HasSelectedEmployee}">
+                    IsEnabled="{Binding HasSelectedEmployee}"
+                    Visibility="{Binding IsAdmin, Converter={StaticResource BoolToVis}}">
                 <StackPanel Orientation="Horizontal">
                     <materialDesign:PackIcon Kind="Pencil" Width="20" Height="20" Margin="0,0,5,0"/>
                     <TextBlock Text="Изменить"/>
@@ -54,7 +93,8 @@
             <Button Command="{Binding DeleteEmployeeCommand}" 
                     Style="{StaticResource MaterialDesignOutlinedButton}"
                     Margin="0,0,8,0"
-                    IsEnabled="{Binding HasSelectedEmployee}">
+                    IsEnabled="{Binding HasSelectedEmployee}"
+                    Visibility="{Binding IsAdmin, Converter={StaticResource BoolToVis}}">
                 <StackPanel Orientation="Horizontal">
                     <materialDesign:PackIcon Kind="Delete" Width="20" Height="20" Margin="0,0,5,0"/>
                     <TextBlock Text="Удалить"/>
@@ -68,22 +108,56 @@
                   SelectedItem="{Binding SelectedEmployee}"
                   AutoGenerateColumns="False" 
                   IsReadOnly="True"
-                  CanUserSortColumns="True">
+                  CanUserSortColumns="True"
+                  SelectionMode="Single"
+                  SelectionUnit="FullRow"
+                  GridLinesVisibility="None"
+                  HeadersVisibility="Column"
+                  HorizontalScrollBarVisibility="Auto"
+                  VerticalScrollBarVisibility="Auto"
+                  ColumnWidth="*"
+                  materialDesign:DataGridAssist.CellPadding="8 4"
+                  materialDesign:DataGridAssist.ColumnHeaderPadding="8 4">
             <DataGrid.Columns>
-                <DataGridTextColumn Header="ФИО" Binding="{Binding FullName}" Width="*" CanUserSort="True"/>
-                <DataGridTextColumn Header="Должность" Binding="{Binding Position}" Width="150" CanUserSort="True"/>
-                <DataGridTextColumn Header="Телефон" Binding="{Binding PhoneNumber}" Width="150"/>
-                <DataGridTextColumn Header="Email" Binding="{Binding Email}" Width="*"/>
+                <DataGridTextColumn Header="ФИО" 
+                                    Binding="{Binding FullName}" 
+                                    Width="2*"
+                                    ElementStyle="{StaticResource MaterialDesignDataGridTextColumnStyle}"/>
 
-                <DataGridTemplateColumn Header="Соцсети" Width="100">
+                <DataGridTextColumn Header="Должность" 
+                                   Binding="{Binding Position}" 
+                                   Width="1.5*"
+                                   ElementStyle="{StaticResource MaterialDesignDataGridTextColumnStyle}"/>
+
+                <DataGridTextColumn Header="Телефон" 
+                                   Binding="{Binding PhoneNumber}" 
+                                   Width="1.5*"
+                                   ElementStyle="{StaticResource MaterialDesignDataGridTextColumnStyle}"/>
+
+                <DataGridTextColumn Header="Email" 
+                                   Binding="{Binding Email}" 
+                                   Width="2*"
+                                   ElementStyle="{StaticResource MaterialDesignDataGridTextColumnStyle}"/>
+
+                <DataGridTextColumn Header="Соцсети" 
+                                   Binding="{Binding SocialLink}" 
+                                   Width="2*"
+                                   ElementStyle="{StaticResource MaterialDesignDataGridTextColumnStyle}"/>
+
+                <DataGridTemplateColumn Header="Действия" 
+                                       Width="Auto"
+                                       IsReadOnly="True">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
                             <Button Command="{Binding DataContext.OpenSocialCommand, 
                                     RelativeSource={RelativeSource AncestorType=DataGrid}}"
                                     CommandParameter="{Binding}"
                                     Style="{StaticResource MaterialDesignFlatButton}"
-                                    ToolTip="Открыть ссылку">
-                                <materialDesign:PackIcon Kind="Link" Width="20" Height="20"/>
+                                    ToolTip="Открыть соцсети"
+                                    Visibility="{Binding DataContext.IsAdmin, 
+                                    RelativeSource={RelativeSource AncestorType=DataGrid}, 
+                                    Converter={StaticResource BoolToVis}}">
+                                <materialDesign:PackIcon Kind="Link" Width="16" Height="16"/>
                             </Button>
                         </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
