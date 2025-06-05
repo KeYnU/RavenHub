@@ -3,10 +3,12 @@
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
       xmlns:local="clr-namespace:RavenHub.Pages"
-      Title="RavenHub - Задачи">
+      Title="RavenHub - Задачи"
+      Foreground="{DynamicResource MaterialDesignBody}">
 
     <Page.Resources>
-
+        <local:StatusToIconConverter x:Key="StatusToIconConverter"/>
+        <local:StatusToColorConverter x:Key="StatusToColorConverter"/>
     </Page.Resources>
 
     <Grid Margin="16">
@@ -40,6 +42,11 @@
                              Margin="0,0,8,0"
                              Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
                              Style="{StaticResource MaterialDesignOutlinedTextBox}"/>
+
+                    <ComboBox Width="150" Margin="8,0,0,0"
+                              ItemsSource="{Binding StatusFilters}"
+                              SelectedItem="{Binding SelectedStatusFilter}"
+                              Style="{StaticResource MaterialDesignOutlinedComboBox}"/>
                 </StackPanel>
 
                 <!-- Таблица задач -->
@@ -57,7 +64,24 @@
                           IsReadOnly="True">
                     <DataGrid.Columns>
                         <DataGridTemplateColumn Header="Статус" Width="80">
-                            
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <materialDesign:PackIcon 
+                Kind="{Binding IsCompleted, Converter={StaticResource StatusToIconConverter}}"
+                Foreground="{Binding IsCompleted, Converter={StaticResource StatusToColorConverter}}"
+                Width="24" Height="24">
+                                        <materialDesign:PackIcon.ToolTip>
+                                            <ToolTip>
+                                                <StackPanel>
+                                                    <TextBlock Text="{Binding Title}" FontWeight="Bold"/>
+                                                    <TextBlock Text="{Binding Deadline, StringFormat='Срок: {0:dd.MM.yyyy}'}"/>
+                                                    <TextBlock Text="{Binding IsCompleted, StringFormat='Выполнено: {0}'}"/>
+                                                </StackPanel>
+                                            </ToolTip>
+                                        </materialDesign:PackIcon.ToolTip>
+                                    </materialDesign:PackIcon>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
                         <DataGridTextColumn Header="Название" Binding="{Binding Title}" Width="*"/>
                         <DataGridTextColumn Header="Описание" Binding="{Binding Description}" Width="2*"/>

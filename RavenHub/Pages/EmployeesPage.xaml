@@ -4,14 +4,17 @@
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
       xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
       xmlns:local="clr-namespace:RavenHub.Pages"
+      xmlns:converters="clr-namespace:RavenHub.Converters"
       xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
       mc:Ignorable="d" 
       d:DesignHeight="600" d:DesignWidth="900"
-      Title="Сотрудники">
+      Title="Сотрудники"
+      Foreground="{DynamicResource MaterialDesignBody}">
 
     <Grid Margin="16">
         <Grid.Resources>
             <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+            <converters:StringNotEmptyConverter x:Key="StringNotEmptyConverter"/>
             <Style TargetType="DataGridCell" BasedOn="{StaticResource MaterialDesignDataGridCell}">
                 <Setter Property="Padding" Value="8"/>
                 <Setter Property="Template">
@@ -51,7 +54,8 @@
             <Button Command="{Binding ExportToCsvCommand}" 
                     Style="{StaticResource MaterialDesignOutlinedButton}"
                     Margin="0,0,8,0"
-                    ToolTip="Экспорт в CSV">
+                    ToolTip="Экспорт в CSV"
+                    Visibility="{Binding IsAdmin, Converter={StaticResource BoolToVis}}">
                 <StackPanel Orientation="Horizontal">
                     <materialDesign:PackIcon Kind="FileExcel" Width="20" Height="20" Margin="0,0,5,0"/>
                     <TextBlock Text="CSV"/>
@@ -100,6 +104,31 @@
                     <TextBlock Text="Удалить"/>
                 </StackPanel>
             </Button>
+
+            <!-- Новые кнопки для документов -->
+            <Button Command="{Binding GenerateEmploymentDocumentCommand}" 
+                    Style="{StaticResource MaterialDesignOutlinedButton}"
+                    Margin="0,0,8,0"
+                    IsEnabled="{Binding HasSelectedEmployee}"
+                    Visibility="{Binding IsAdmin, Converter={StaticResource BoolToVis}}"
+                    ToolTip="Создать документ о трудоустройстве">
+                <StackPanel Orientation="Horizontal">
+                    <materialDesign:PackIcon Kind="FileDocument" Width="20" Height="20" Margin="0,0,5,0"/>
+                    <TextBlock Text="Трудоустройство"/>
+                </StackPanel>
+            </Button>
+
+            <Button Command="{Binding GenerateDismissalDocumentCommand}" 
+                    Style="{StaticResource MaterialDesignOutlinedButton}"
+                    Margin="0,0,8,0"
+                    IsEnabled="{Binding HasSelectedEmployee}"
+                    Visibility="{Binding IsAdmin, Converter={StaticResource BoolToVis}}"
+                    ToolTip="Создать документ об увольнении">
+                <StackPanel Orientation="Horizontal">
+                    <materialDesign:PackIcon Kind="FileRemove" Width="20" Height="20" Margin="0,0,5,0"/>
+                    <TextBlock Text="Увольнение"/>
+                </StackPanel>
+            </Button>
         </StackPanel>
 
         <DataGrid Grid.Row="2" 
@@ -115,9 +144,59 @@
                   HeadersVisibility="Column"
                   HorizontalScrollBarVisibility="Auto"
                   VerticalScrollBarVisibility="Auto"
-                  ColumnWidth="*"
                   materialDesign:DataGridAssist.CellPadding="8 4"
                   materialDesign:DataGridAssist.ColumnHeaderPadding="8 4">
+
+            <DataGrid.ContextMenu>
+                <ContextMenu>
+                    <MenuItem Header="Документ о трудоустройстве" 
+                  Visibility="{Binding DataContext.IsAdmin, 
+                              RelativeSource={RelativeSource AncestorType=DataGrid}, 
+                              Converter={StaticResource BoolToVis}}">
+                        <MenuItem.Icon>
+                            <materialDesign:PackIcon Kind="FileDocument" Width="16" Height="16"/>
+                        </MenuItem.Icon>
+                        <MenuItem Header="Word (.docx)" 
+                      Command="{Binding DataContext.GenerateEmploymentDocumentWordCommand, 
+                                RelativeSource={RelativeSource AncestorType=DataGrid}}">
+                            <MenuItem.Icon>
+                                <materialDesign:PackIcon Kind="FileWord" Width="16" Height="16"/>
+                            </MenuItem.Icon>
+                        </MenuItem>
+                        <MenuItem Header="PDF (.pdf)" 
+                      Command="{Binding DataContext.GenerateEmploymentDocumentPdfCommand, 
+                                RelativeSource={RelativeSource AncestorType=DataGrid}}">
+                            <MenuItem.Icon>
+                                <materialDesign:PackIcon Kind="FilePdfBox" Width="16" Height="16"/>
+                            </MenuItem.Icon>
+                        </MenuItem>
+                    </MenuItem>
+
+                    <MenuItem Header="Документ об увольнении" 
+                  Visibility="{Binding DataContext.IsAdmin, 
+                              RelativeSource={RelativeSource AncestorType=DataGrid}, 
+                              Converter={StaticResource BoolToVis}}">
+                        <MenuItem.Icon>
+                            <materialDesign:PackIcon Kind="FileRemove" Width="16" Height="16"/>
+                        </MenuItem.Icon>
+                        <MenuItem Header="Word (.docx)" 
+                      Command="{Binding DataContext.GenerateDismissalDocumentWordCommand, 
+                                RelativeSource={RelativeSource AncestorType=DataGrid}}">
+                            <MenuItem.Icon>
+                                <materialDesign:PackIcon Kind="FileWord" Width="16" Height="16"/>
+                            </MenuItem.Icon>
+                        </MenuItem>
+                        <MenuItem Header="PDF (.pdf)" 
+                      Command="{Binding DataContext.GenerateDismissalDocumentPdfCommand, 
+                                RelativeSource={RelativeSource AncestorType=DataGrid}}">
+                            <MenuItem.Icon>
+                                <materialDesign:PackIcon Kind="FilePdfBox" Width="16" Height="16"/>
+                            </MenuItem.Icon>
+                        </MenuItem>
+                    </MenuItem>
+                </ContextMenu>
+            </DataGrid.ContextMenu>
+
             <DataGrid.Columns>
                 <DataGridTextColumn Header="ФИО" 
                                     Binding="{Binding FullName}" 
@@ -146,17 +225,18 @@
 
                 <DataGridTemplateColumn Header="Действия" 
                                        Width="Auto"
-                                       IsReadOnly="True">
+                                       IsReadOnly="True"
+                                       Visibility="{Binding DataContext.IsAdmin, 
+                                                   RelativeSource={RelativeSource AncestorType=DataGrid}, 
+                                                   Converter={StaticResource BoolToVis}}">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
                             <Button Command="{Binding DataContext.OpenSocialCommand, 
                                     RelativeSource={RelativeSource AncestorType=DataGrid}}"
                                     CommandParameter="{Binding}"
-                                    Style="{StaticResource MaterialDesignFlatButton}"
+                                                                        Style="{StaticResource MaterialDesignFlatButton}"
                                     ToolTip="Открыть соцсети"
-                                    Visibility="{Binding DataContext.IsAdmin, 
-                                    RelativeSource={RelativeSource AncestorType=DataGrid}, 
-                                    Converter={StaticResource BoolToVis}}">
+                                    IsEnabled="{Binding SocialLink, Converter={StaticResource StringNotEmptyConverter}}">
                                 <materialDesign:PackIcon Kind="Link" Width="16" Height="16"/>
                             </Button>
                         </DataTemplate>

@@ -1,10 +1,13 @@
-﻿using System;
+﻿using MaterialDesignThemes.Wpf;
+using RavenHub.Helpers;
+using System;
+using System.Linq;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media;
 using System.Windows.Media.Animation;
-using MaterialDesignThemes.Wpf;
-using System.Threading.Tasks;
 
 namespace RavenHub
 {
@@ -20,13 +23,13 @@ namespace RavenHub
             _userRepository = new UserRepository(App.DbService);
             _passwordVisible = false;
             UpdatePasswordVisibility();
-            this.Loaded += Window_Loaded; // Добавляем обработчик загрузки окна
         }
 
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
-            // Устанавливаем фокус на поле логина при загрузке
             txtUsername.Focus();
+            // Применяем тему окна используя ваш WindowThemeHelper
+            WindowThemeHelper.ApplyWindowTheme(this);
         }
 
         private async void btnLogin_Click(object sender, RoutedEventArgs e)
@@ -34,19 +37,11 @@ namespace RavenHub
             await AttemptLogin();
         }
 
-        private async void btnLogin_KeyDown(object sender, KeyEventArgs e)
+        private async void InputField_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.Key == Key.Enter)
             {
                 await AttemptLogin();
-            }
-        }
-
-        private void InputField_KeyDown(object sender, KeyEventArgs e)
-        {
-            if (e.Key == Key.Enter)
-            {
-                AttemptLogin().ConfigureAwait(false);
             }
         }
 
@@ -69,21 +64,41 @@ namespace RavenHub
 
                 if (isAuthenticated)
                 {
-                    Dispatcher.Invoke(() =>
+                    await Dispatcher.InvokeAsync(() =>
                     {
-                        var mainWindow = new MainWindow
+                        // Проверяем, нет ли уже открытого MainWindow
+                        var existingMainWindow = Application.Current.Windows
+                            .OfType<MainWindow>()
+                            .FirstOrDefault();
+
+                        if (existingMainWindow != null)
                         {
-                            Username = username,
-                            IsAdmin = isAdmin
-                        };
-                        Application.Current.MainWindow = mainWindow;
+                            // Если MainWindow уже существует, активируем его
+                            existingMainWindow.Activate();
+                            existingMainWindow.WindowState = WindowState.Normal;
+                        }
+                        else
+                        {
+                            // Создаем новое главное окно только если его нет
+                            var mainWindow = new MainWindow
+                            {
+                                Username = username,
+                                IsAdmin = isAdmin
+                            };
+
+                            Application.Current.MainWindow = mainWindow;
+                            mainWindow.Show();
+                        }
+
+                        // Закрываем окно входа
                         this.Close();
-                        mainWindow.Show();
                     });
                 }
                 else
                 {
                     ShowError("Неверный логин или пароль");
+                    txtPassword.Clear();
+                    txtPassword.Focus();
                 }
             }
             catch (Exception ex)
@@ -98,9 +113,19 @@ namespace RavenHub
             if (_isAnimating) return;
 
             _isAnimating = true;
+
+            // Запускаем анимацию встряски
             var shakeAnimation = (Storyboard)FindResource("ShakeAnimation");
-            shakeAnimation.Completed += (s, e) => _isAnimating = false;
-            shakeAnimation.Begin(MainBorder);
+            shakeAnimation.Completed += (s, e) =>
+            {
+                _isAnimating = false;
+                // Сбрасываем позицию после анимации
+                if (LoginCard.RenderTransform is TranslateTransform transform)
+                {
+                    transform.X = 0;
+                }
+            };
+            shakeAnimation.Begin();
 
             MessageBox.Show(message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
         }
@@ -118,40 +143,71 @@ namespace RavenHub
                 txtPasswordVisible.Text = txtPassword.Password;
                 txtPassword.Visibility = Visibility.Collapsed;
                 txtPasswordVisible.Visibility = Visibility.Visible;
-                ((PackIcon)btnTogglePassword.Content).Kind = PackIconKind.EyeOffOutline;
+                eyeIcon.Kind = PackIconKind.EyeOffOutline;
                 btnTogglePassword.ToolTip = "Скрыть пароль";
                 txtPasswordVisible.Focus();
+                txtPasswordVisible.SelectionStart = txtPasswordVisible.Text.Length;
             }
             else
             {
                 txtPassword.Password = txtPasswordVisible.Text;
                 txtPasswordVisible.Visibility = Visibility.Collapsed;
                 txtPassword.Visibility = Visibility.Visible;
-                ((PackIcon)btnTogglePassword.Content).Kind = PackIconKind.EyeOutline;
+                eyeIcon.Kind = PackIconKind.EyeOutline;
                 btnTogglePassword.ToolTip = "Показать пароль";
                 txtPassword.Focus();
             }
         }
 
-        private void btnClose_Click(object sender, RoutedEventArgs e) => Application.Current.Shutdown();
-        private void btnMinimize_Click(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
-        private void DragWindow(object sender, MouseButtonEventArgs e) => DragMove();
+        private async void btnRegister_Click(object sender, RoutedEventArgs e)
+        {
+            // Анимация исчезновения
+            var fadeOut = new DoubleAnimation(1, 0, TimeSpan.FromSeconds(0.3));
+            fadeOut.Completed += (s, args) =>
+            {
+                this.Hide();
+
+                var registerWindow = new RegisterWindow();
+                registerWindow.Owner = this;
+                registerWindow.WindowStartupLocation = WindowStartupLocation.Manual;
+
+                // Позиционируем окно регистрации в том же месте
+                registerWindow.Left = this.Left;
+                registerWindow.Top = this.Top;
+
+                bool? result = registerWindow.ShowDialog();
+
+                if (result == true)
+                {
+                    // Если регистрация успешна и был выполнен автовход
+                    this.Close();
+                }
+                else
+                {
+                    // Возвращаемся к окну входа
+                    this.Show();
+
+                    // Анимация появления
+                    var fadeIn = new DoubleAnimation(0, 1, TimeSpan.FromSeconds(0.3));
+                    this.BeginAnimation(OpacityProperty, fadeIn);
+
+                    txtUsername.Focus();
+                }
+            };
+
+            this.BeginAnimation(OpacityProperty, fadeOut);
+        }
 
         protected override void OnClosed(EventArgs e)
         {
             _userRepository?.Dispose();
             base.OnClosed(e);
-        }
 
-        private void btnRegister_Click(object sender, RoutedEventArgs e)
-        {          
-            var registerWindow = new RegisterWindow();
-            this.Hide();
-
-            registerWindow.ShowDialog();
-
-            this.Show();
-            txtUsername.Focus();
+            // Завершаем приложение только если нет главного окна
+            if (Application.Current.MainWindow == null || Application.Current.MainWindow == this)
+            {
+                Application.Current.Shutdown();
+            }
         }
     }
 }

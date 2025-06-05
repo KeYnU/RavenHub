@@ -1,7 +1,10 @@
 ﻿using System;
 using System.Windows;
 using System.Configuration;
+using System.Windows.Media;
 using System.Windows.Media.Animation;
+using System.Threading.Tasks;
+using RavenHub.Helpers;
 
 namespace RavenHub
 {
@@ -10,7 +13,19 @@ namespace RavenHub
         private SplashWindow _splashWindow;
         public static DatabaseConnectionService DbService { get; private set; }
 
-        // Этот метод будет вызываться из App.xaml через Startup="App_OnStartup"
+        protected override void OnStartup(StartupEventArgs e)
+        {
+            base.OnStartup(e);
+
+            // Инициализация темы ПЕРЕД созданием окон
+            ThemeManager.InitializeTheme();
+            // Запускаем наблюдатель за изменениями темы Windows
+            ThemeManager.StartThemeWatcher();
+
+            // Вызываем основную логику
+            App_OnStartup(null, e);
+        }
+
         private void App_OnStartup(object sender, StartupEventArgs e)
         {
             // Инициализация сервиса подключения
@@ -35,19 +50,47 @@ namespace RavenHub
             _splashWindow = new SplashWindow();
             _splashWindow.Show();
 
-            bool isConnected = await _splashWindow.CheckConnectionWithFeedback(DbService);
-
-            if (!isConnected)
+            try
             {
-                MessageBox.Show(
-                    "Не удалось подключиться к базе данных.\n\n" +
-                    "Приложение будет работать в ограниченном режиме.",
-                    "Ошибка подключения",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
-            }
+                // Обновляем статус перед проверкой подключения
+                _splashWindow.UpdateStatus("Инициализация приложения...", Colors.White);
 
-            FadeOutSplash();
+                // Имитация загрузки других компонентов
+                await Task.Delay(800);
+                _splashWindow.UpdateStatus("Загрузка конфигурации...", Colors.White);
+                await Task.Delay(600);
+
+                // Проверка подключения к БД
+                bool isConnected = await _splashWindow.CheckDatabaseConnection(DbService);
+
+                if (!isConnected)
+                {
+                    _splashWindow.UpdateStatus("Ошибка подключения к БД", Colors.Red);
+                    await Task.Delay(1500);
+
+                    MessageBox.Show(
+                        "Не удалось подключиться к базе данных.\n\n" +
+                        "Приложение будет работать в ограниченном режиме.",
+                        "Ошибка подключения",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+                }
+                else
+                {
+                    _splashWindow.UpdateStatus("Завершение инициализации...", Colors.LimeGreen);
+                    await Task.Delay(500);
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Log($"Ошибка инициализации: {ex}", LogLevel.Error);
+                _splashWindow.UpdateStatus($"Ошибка: {ex.Message}", Colors.Red);
+                await Task.Delay(2000);
+            }
+            finally
+            {
+                FadeOutSplash();
+            }
         }
 
         private void FadeOutSplash()
@@ -72,7 +115,8 @@ namespace RavenHub
         {
             var loginWindow = new LoginWindow();
             loginWindow.Show();
-            Current.MainWindow = loginWindow;
+            // Убираем установку MainWindow здесь - это может мешать закрытию
+            // Current.MainWindow = loginWindow;
         }
 
         protected override void OnExit(ExitEventArgs e)

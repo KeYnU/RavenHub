@@ -8,7 +8,8 @@
         Width="400"
         WindowStartupLocation="CenterScreen"
         SizeToContent="Manual"
-        ResizeMode="NoResize">
+        ResizeMode="NoResize"
+        Foreground="{DynamicResource MaterialDesignBody}">
 
     <Grid Margin="10">
         <Grid.RowDefinitions>

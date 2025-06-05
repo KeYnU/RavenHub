@@ -7,7 +7,8 @@
       xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
       mc:Ignorable="d" 
       d:DesignHeight="600" d:DesignWidth="900"
-      Title="RavenHub - Оборудование">
+      Title="RavenHub - Оборудование"
+      Foreground="{DynamicResource MaterialDesignBody}">
 
     <Grid Margin="16">
         <Grid.RowDefinitions>
@@ -126,27 +127,38 @@
                               SelectionMode="Single"
                               SelectionUnit="FullRow">
                         <DataGrid.Columns>
-                            <DataGridTextColumn Header="Тип" Binding="{Binding Type}" Width="*" IsReadOnly="True" CanUserSort="True"/>
-                            <DataGridTextColumn Header="Модель" Binding="{Binding Model}" Width="2*" IsReadOnly="True" CanUserSort="True"/>
+                            <DataGridTextColumn Header="Тип" Binding="{Binding Type}" Width="*" IsReadOnly="False" CanUserSort="True"/>
+                            <DataGridTextColumn Header="Модель" Binding="{Binding Model}" Width="2*" IsReadOnly="False" CanUserSort="True"/>
                             <DataGridTextColumn Header="Количество" Binding="{Binding Quantity}" Width="*" CanUserSort="True"/>
+                            <DataGridTextColumn Header="Дата создания" Binding="{Binding CreatedAt, StringFormat='dd.MM.yyyy'}" Width="*" IsReadOnly="True"/>
                         </DataGrid.Columns>
                     </DataGrid>
 
                     <!-- Кнопки управления -->
                     <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="16">
+                        <Button Command="{Binding RefreshCommand}" 
+                                ToolTip="Обновить данные"
+                                Style="{StaticResource MaterialDesignToolButton}"
+                                Margin="0,0,8,0">
+                            <materialDesign:PackIcon Kind="Refresh" Width="24" Height="24"/>
+                        </Button>
+
                         <Button Command="{Binding ExportCommand}" 
                                 Content="ЭКСПОРТ"
+                                ToolTip="Экспорт данных в файл"
                                 Style="{StaticResource MaterialDesignOutlinedButton}"
                                 Margin="0,0,8,0"/>
+
                         <Button Command="{Binding SaveCommand}" 
                                 Content="СОХРАНИТЬ"
+                                ToolTip="Сохранить изменения в базе данных"
                                 Style="{StaticResource MaterialDesignRaisedButton}"
                                 Margin="0,0,8,0"/>
+
                         <Button Command="{Binding AddEquipmentCommand}" 
+                                ToolTip="Добавить новое оборудование"
                                 Style="{StaticResource MaterialDesignFloatingActionMiniButton}">
-                            <StackPanel Orientation="Horizontal">
-                                <materialDesign:PackIcon Kind="Plus" Width="24" Height="24"/>
-                            </StackPanel>
+                            <materialDesign:PackIcon Kind="Plus" Width="24" Height="24"/>
                         </Button>
                     </StackPanel>
                 </Grid>

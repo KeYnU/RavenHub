@@ -3,16 +3,19 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Data;
 using System.Data.SqlClient;
+using System.IO;
 using System.Linq;
+using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using Microsoft.Win32;
 
 namespace RavenHub.Pages
 {
     public partial class EquipmentPage : Page, INotifyPropertyChanged
     {
-        private string connectionString = @"Data Source=LAPTOP-REGTVFN9; Initial Catalog=RavenHub; Integrated Security=True;";
+        private string connectionString = @"Data Source=.;Initial Catalog=RavenHub;Integrated Security=True;";
         private int _serverCount;
         private int _pcCount;
         private int _laptopCount;
@@ -55,10 +58,10 @@ namespace RavenHub.Pages
             DataContext = this;
 
             // Инициализация команд
-            RefreshCommand = new RelayCommand(RefreshData);
-            SaveCommand = new RelayCommand(SaveData, CanSave);
-            ExportCommand = new RelayCommand(ExportData, CanExport);
-            AddEquipmentCommand = new RelayCommand(AddEquipment);
+            RefreshCommand = new RelayCommand(_ => RefreshData());
+            SaveCommand = new RelayCommand(_ => SaveData(), _ => CanSave());
+            ExportCommand = new RelayCommand(_ => ExportData(), _ => CanExport());
+            AddEquipmentCommand = new RelayCommand(_ => AddEquipment());
 
             // Загрузка данных
             LoadData();
@@ -72,24 +75,26 @@ namespace RavenHub.Pages
                 {
                     connection.Open();
                     SqlDataAdapter dataAdapter = new SqlDataAdapter("SELECT * FROM Equipment", connection);
-                    EquipmentTable = new DataTable();
-                    dataAdapter.Fill(EquipmentTable);
+                    DataTable dt = new DataTable();
+                    dataAdapter.Fill(dt);
 
-                    // Привязка к DataGrid
-                    EquipmentListDataGrid.ItemsSource = EquipmentTable.DefaultView; // Укажи имя DataGrid из XAML
+                    EquipmentTable = dt;
+                    EquipmentListDataGrid.ItemsSource = EquipmentTable.DefaultView;
 
-                    // Подсчет оборудования
                     CalculateCounts();
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Ошибка при подключении: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show($"Ошибка при загрузке данных: {ex.Message}", "Ошибка",
+                               MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
         private void CalculateCounts()
         {
+            if (EquipmentTable == null) return;
+
             ServerCount = EquipmentTable.AsEnumerable()
                 .Where(row => row.Field<string>("Type") == "Сервер")
                 .Sum(row => row.Field<int>("Quantity"));
@@ -99,7 +104,6 @@ namespace RavenHub.Pages
             LaptopCount = EquipmentTable.AsEnumerable()
                 .Where(row => row.Field<string>("Type") == "Ноутбук")
                 .Sum(row => row.Field<int>("Quantity"));
-            UpdateTotal();
         }
 
         private void UpdateTotal()
@@ -108,50 +112,133 @@ namespace RavenHub.Pages
             OnPropertyChanged(nameof(TotalCount));
         }
 
-        private void RefreshData(object parameter)
-        {
-            LoadData();
-            ShowMessage("Данные обновлены");
-        }
-
-        private void SaveData(object parameter)
+        private void RefreshData()
         {
             try
             {
+                LoadData();
+                ShowMessage("Данные успешно обновлены");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка при обновлении: {ex.Message}", "Ошибка",
+                               MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void SaveData()
+        {
+            try
+            {
+                if (EquipmentTable == null || EquipmentTable.GetChanges() == null)
+                {
+                    ShowMessage("Нет изменений для сохранения");
+                    return;
+                }
+
                 using (SqlConnection connection = new SqlConnection(connectionString))
                 {
                     connection.Open();
                     SqlDataAdapter dataAdapter = new SqlDataAdapter("SELECT * FROM Equipment", connection);
                     SqlCommandBuilder commandBuilder = new SqlCommandBuilder(dataAdapter);
-                    dataAdapter.Update(EquipmentTable);
-                    ShowMessage("Изменения сохранены");
+                    int rowsAffected = dataAdapter.Update(EquipmentTable);
+
+                    EquipmentTable.AcceptChanges();
+                    ShowMessage($"Успешно сохранено изменений: {rowsAffected}");
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Ошибка при сохранении: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show($"Ошибка при сохранении: {ex.Message}", "Ошибка",
+                               MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
-        private bool CanSave(object parameter)
+        private bool CanSave()
         {
-            return EquipmentTable != null && EquipmentTable.Rows.Count > 0;
+            return EquipmentTable != null && EquipmentTable.GetChanges() != null;
         }
 
-        private void ExportData(object parameter)
-        {
-            ShowMessage("Экспорт данных выполнен");
-        }
-
-        private bool CanExport(object parameter)
-        {
-            return EquipmentTable != null && EquipmentTable.Rows.Count > 0;
-        }
-
-        private void AddEquipment(object parameter)
+        private void ExportData()
         {
             try
             {
+                if (EquipmentTable == null || EquipmentTable.Rows.Count == 0)
+                {
+                    ShowMessage("Нет данных для экспорта");
+                    return;
+                }
+
+                SaveFileDialog saveFileDialog = new SaveFileDialog
+                {
+                    Filter = "CSV файлы (*.csv)|*.csv|Excel файлы (*.xlsx)|*.xlsx",
+                    FileName = $"Оборудование_{DateTime.Now:yyyyMMdd_HHmmss}"
+                };
+
+                if (saveFileDialog.ShowDialog() == true)
+                {
+                    string filePath = saveFileDialog.FileName;
+                    string extension = Path.GetExtension(filePath);
+
+                    if (extension.Equals(".csv", StringComparison.OrdinalIgnoreCase))
+                    {
+                        ExportToCsv(filePath);
+                    }
+                    else if (extension.Equals(".xlsx", StringComparison.OrdinalIgnoreCase))
+                    {
+                        ExportToExcel(filePath);
+                    }
+
+                    ShowMessage($"Данные успешно экспортированы в файл: {filePath}");
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка при экспорте: {ex.Message}", "Ошибка",
+                               MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void ExportToCsv(string filePath)
+        {
+            StringBuilder sb = new StringBuilder();
+
+            // Заголовки
+            var headers = EquipmentTable.Columns.Cast<DataColumn>()
+                .Select(column => column.ColumnName);
+            sb.AppendLine(string.Join(";", headers));
+
+            // Данные
+            foreach (DataRow row in EquipmentTable.Rows)
+            {
+                var fields = row.ItemArray.Select(field =>
+                    field.ToString().Replace(";", ","));
+                sb.AppendLine(string.Join(";", fields));
+            }
+
+            File.WriteAllText(filePath, sb.ToString(), Encoding.UTF8);
+        }
+
+        private void ExportToExcel(string filePath)
+        {
+            // Для экспорта в Excel нужно добавить ссылку на Microsoft.Office.Interop.Excel
+            // или использовать библиотеку типа EPPlus
+            MessageBox.Show("Экспорт в Excel требует дополнительных библиотек. Экспортируем в CSV вместо этого.",
+                          "Информация", MessageBoxButton.OK, MessageBoxImage.Information);
+            ExportToCsv(Path.ChangeExtension(filePath, ".csv"));
+        }
+
+        private bool CanExport()
+        {
+            return EquipmentTable != null && EquipmentTable.Rows.Count > 0;
+        }
+
+        private void AddEquipment()
+        {
+            try
+            {
+                if (EquipmentTable == null) return;
+
                 DataRow newRow = EquipmentTable.NewRow();
                 newRow["Type"] = "Новое";
                 newRow["Model"] = "Модель";
@@ -159,19 +246,18 @@ namespace RavenHub.Pages
                 newRow["CreatedAt"] = DateTime.Now;
                 EquipmentTable.Rows.Add(newRow);
 
+                // Прокрутка и фокус на новой строке
+                EquipmentListDataGrid.ScrollIntoView(newRow);
+                EquipmentListDataGrid.SelectedItem = newRow;
+                EquipmentListDataGrid.Focus();
+
                 ShowMessage("Добавлено новое оборудование");
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Ошибка при добавлении: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show($"Ошибка при добавлении: {ex.Message}", "Ошибка",
+                               MessageBoxButton.OK, MessageBoxImage.Error);
             }
-        }
-
-        private void NumberValidationTextBox(object sender, TextCompositionEventArgs e)
-        {
-            var textBox = sender as TextBox;
-            var fullText = textBox.Text.Remove(textBox.SelectionStart, textBox.SelectionLength).Insert(textBox.SelectionStart, e.Text);
-            e.Handled = !int.TryParse(fullText, out int _);
         }
 
         private void ShowMessage(string message)
@@ -183,6 +269,28 @@ namespace RavenHub.Pages
         protected virtual void OnPropertyChanged(string propertyName)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+    }
+
+    public class RelayCommand : ICommand
+    {
+        private readonly Action<object> _execute;
+        private readonly Func<object, bool> _canExecute;
+
+        public RelayCommand(Action<object> execute, Func<object, bool> canExecute = null)
+        {
+            _execute = execute ?? throw new ArgumentNullException(nameof(execute));
+            _canExecute = canExecute;
+        }
+
+        public bool CanExecute(object parameter) => _canExecute == null || _canExecute(parameter);
+
+        public void Execute(object parameter) => _execute(parameter);
+
+        public event EventHandler CanExecuteChanged
+        {
+            add { CommandManager.RequerySuggested += value; }
+            remove { CommandManager.RequerySuggested -= value; }
         }
     }
 }

@@ -3,19 +3,20 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
         Title="RavenHub - Login"
-        WindowStyle="None"
         WindowStartupLocation="CenterScreen"
-        ResizeMode="NoResize"
-        AllowsTransparency="True"
-        Height="450" 
-        Width="400"
-        Background="Transparent"
-        Loaded="Window_Loaded">
+        ResizeMode="CanMinimize"
+        Icon="/Start/RavenHub.jpg"
+        Height="550" 
+        Width="450"
+        Loaded="Window_Loaded"
+        Background="{DynamicResource MaterialDesignBackground}"
+        Foreground="{DynamicResource MaterialDesignBody}">
 
     <Window.Resources>
         <!-- Анимация встряски -->
         <Storyboard x:Key="ShakeAnimation">
-            <DoubleAnimationUsingKeyFrames Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.X)">
+            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="LoginCard" 
+                                       Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.X)">
                 <EasingDoubleKeyFrame KeyTime="0:0:0.05" Value="-10"/>
                 <EasingDoubleKeyFrame KeyTime="0:0:0.10" Value="10"/>
                 <EasingDoubleKeyFrame KeyTime="0:0:0.15" Value="-8"/>
@@ -29,73 +30,37 @@
                 <EasingDoubleKeyFrame KeyTime="0:0:0.55" Value="0"/>
             </DoubleAnimationUsingKeyFrames>
         </Storyboard>
-
-        <TranslateTransform x:Key="LoginTransform"/>
     </Window.Resources>
 
-    <Border x:Name="MainBorder"
-            CornerRadius="10"
-            Background="{DynamicResource MaterialDesignBackground}"
-            BorderBrush="{DynamicResource MaterialDesignDivider}"
-            BorderThickness="1"
-            RenderTransform="{StaticResource LoginTransform}">
+    <Grid Background="{DynamicResource MaterialDesignBackground}">
+        <materialDesign:Card x:Name="LoginCard" 
+                            Margin="32" 
+                            UniformCornerRadius="10"
+                            Background="{DynamicResource MaterialDesignCardBackground}">
+            <materialDesign:Card.RenderTransform>
+                <TranslateTransform x:Name="CardTransform"/>
+            </materialDesign:Card.RenderTransform>
 
-        <Grid>
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="*"/>
-            </Grid.RowDefinitions>
-
-            <!-- Панель управления -->
-            <Grid Grid.Row="0" Height="35">
-                <Grid Background="Transparent" MouseLeftButtonDown="DragWindow">
-                    <TextBlock Text="RavenHub" 
-                               HorizontalAlignment="Center" 
-                               VerticalAlignment="Center" 
-                               FontSize="14" 
-                               FontWeight="Medium" 
-                               Margin="0,8,0,0"/>
-                </Grid>
-
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,5,10,0">
-                    <Button x:Name="btnMinimize" 
-                            Width="25" 
-                            Height="25" 
-                            Style="{StaticResource MaterialDesignFlatButton}"
-                            Padding="0" 
-                            Margin="0,0,5,0"
-                            Click="btnMinimize_Click">
-                        <materialDesign:PackIcon Kind="WindowMinimize" Width="16" Height="16"/>
-                    </Button>
-                    <Button x:Name="btnClose" 
-                            Width="25" 
-                            Height="25" 
-                            Style="{StaticResource MaterialDesignFlatButton}"
-                            Padding="0"
-                            Click="btnClose_Click">
-                        <materialDesign:PackIcon Kind="Close" Width="16" Height="16"/>
-                    </Button>
-                </StackPanel>
-            </Grid>
-
-            <!-- Контент -->
-            <StackPanel Grid.Row="1" VerticalAlignment="Center" Margin="20">
+            <StackPanel VerticalAlignment="Center" Margin="20">
                 <materialDesign:PackIcon 
                     Kind="DesktopClassic" 
                     Width="80" 
                     Height="80"
                     HorizontalAlignment="Center"
+                    Foreground="{DynamicResource MaterialDesignBody}"
                     Margin="0,0,0,10"/>
 
                 <TextBlock Text="Welcome to RavenHub"
                           HorizontalAlignment="Center"
                           FontSize="20"
                           FontWeight="SemiBold"
+                          Foreground="{DynamicResource MaterialDesignBody}"
                           Margin="0,0,0,30"/>
 
                 <TextBox x:Name="txtUsername"
                         Style="{StaticResource MaterialDesignFloatingHintTextBox}"
                         materialDesign:HintAssist.Hint="Username"
+                        Foreground="{DynamicResource MaterialDesignBody}"
                         Margin="0,0,0,10"
                         KeyDown="InputField_KeyDown"/>
 
@@ -109,6 +74,7 @@
                     <PasswordBox x:Name="txtPassword"
                                 Style="{StaticResource MaterialDesignFloatingHintPasswordBox}"
                                 materialDesign:HintAssist.Hint="Password"
+                                Foreground="{DynamicResource MaterialDesignBody}"
                                 Grid.Column="0"
                                 VerticalContentAlignment="Center"
                                 KeyDown="InputField_KeyDown"/>
@@ -116,6 +82,7 @@
                     <TextBox x:Name="txtPasswordVisible"
                             Style="{StaticResource MaterialDesignFloatingHintTextBox}"
                             materialDesign:HintAssist.Hint="Password"
+                            Foreground="{DynamicResource MaterialDesignBody}"
                             Grid.Column="0"
                             VerticalContentAlignment="Center"
                             Visibility="Collapsed"
@@ -124,6 +91,7 @@
                     <Button x:Name="btnTogglePassword"
                             Grid.Column="1"
                             Style="{StaticResource MaterialDesignIconButton}"
+                            Foreground="{DynamicResource MaterialDesignBody}"
                             Margin="0,0,0,0"
                             VerticalAlignment="Center"
                             Click="btnTogglePassword_Click"
@@ -138,17 +106,15 @@
                         Padding="15,5"
                         HorizontalAlignment="Stretch"
                         Click="btnLogin_Click"
-                        KeyDown="btnLogin_KeyDown"
+                        IsDefault="True"
                         Margin="0,0,0,10"/>
 
                 <Button x:Name="btnRegister"
                         Content="Register"
-                        Style="{StaticResource MaterialDesignRaisedButton}"
-                        Background="DimGray"
-                        Foreground="White"
+                        Style="{StaticResource MaterialDesignFlatButton}"
                         HorizontalAlignment="Center"
                         Click="btnRegister_Click"/>
             </StackPanel>
-        </Grid>
-    </Border>
+        </materialDesign:Card>
+    </Grid>
 </Window>

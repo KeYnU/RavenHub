@@ -9,7 +9,7 @@ namespace RavenHub.Pages
 {
     public partial class StatisticsPage : Page, INotifyPropertyChanged
     {
-        private string connectionString = @"Data Source=LAPTOP-REGTVFN9; Initial Catalog=RavenHub; Integrated Security=True;";
+        private string connectionString = @"Data Source=.; Initial Catalog=RavenHub; Integrated Security=True;";
         private int _soldBox;
         private int _gotBox;
         private int _overallBox;

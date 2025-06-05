@@ -5,16 +5,73 @@ using System.Windows.Navigation;
 using RavenHub.Pages;
 using MaterialDesignThemes.Wpf;
 using System.Diagnostics;
+using System.IO;
+using System.Windows.Media.Imaging;
+using System.Data.SqlClient;
+using System.ComponentModel;
+using System.Windows.Media;
+using RavenHub.Helpers;
 
 namespace RavenHub
 {
-    public partial class MainWindow : Window
+    public partial class MainWindow : Window, INotifyPropertyChanged
     {
         private readonly SidebarManager _sidebarManager;
         private bool _isClosing;
+        private string connectionString = @"Data Source=.; Initial Catalog=RavenHub; Integrated Security=True;";
+        private bool _hasUserAvatar;
+        private bool _showDefaultAvatar;
+        private ImageSource _userAvatarSource;
 
         public string Username { get; set; }
         public bool IsAdmin { get; set; }
+
+        public bool HasUserAvatar
+        {
+            get { return _hasUserAvatar; }
+            set
+            {
+                if (_hasUserAvatar != value)
+                {
+                    _hasUserAvatar = value;
+                    ShowDefaultAvatar = !value; // Инвертируем значение
+                    OnPropertyChanged(nameof(HasUserAvatar));
+                }
+            }
+        }
+
+        public bool ShowDefaultAvatar
+        {
+            get { return _showDefaultAvatar; }
+            set
+            {
+                if (_showDefaultAvatar != value)
+                {
+                    _showDefaultAvatar = value;
+                    OnPropertyChanged(nameof(ShowDefaultAvatar));
+                }
+            }
+        }
+
+        public ImageSource UserAvatarSource
+        {
+            get { return _userAvatarSource; }
+            set
+            {
+                if (_userAvatarSource != value)
+                {
+                    _userAvatarSource = value;
+                    OnPropertyChanged(nameof(UserAvatarSource));
+                }
+            }
+        }
+
+        public event PropertyChangedEventHandler PropertyChanged;
+
+        protected virtual void OnPropertyChanged(string propertyName)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
 
         public MainWindow()
         {
@@ -33,6 +90,10 @@ namespace RavenHub
                 Loaded += OnLoaded;
                 MainFrame.Navigated += OnFrameNavigated;
 
+                // Устанавливаем DataContext для привязки данных
+                DataContext = this;
+                // Устанавливаем начальное значение для отображения стандартной иконки
+                ShowDefaultAvatar = true;
                 Logger.Log("[MainWindow] Конструктор завершил выполнение", LogLevel.Debug);
             }
             catch (Exception ex)
@@ -42,6 +103,60 @@ namespace RavenHub
                     "Фатальная ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
                 Environment.Exit(1);
             }
+        }
+
+        public void LoadUserAvatar()
+        {
+            try
+            {
+                Logger.Log("[MainWindow] Загрузка аватарки пользователя", LogLevel.Debug);
+
+                using (SqlConnection connection = new SqlConnection(connectionString))
+                {
+                    connection.Open();
+                    string query = "SELECT AvatarImage FROM UserAvatars WHERE Login = @Login";
+                    SqlCommand command = new SqlCommand(query, connection);
+                    command.Parameters.AddWithValue("@Login", Username);
+
+                    object result = command.ExecuteScalar();
+
+                    if (result != null && result != DBNull.Value)
+                    {
+                        byte[] imageData = (byte[])result;
+
+                        BitmapImage avatarImage = new BitmapImage();
+                        using (MemoryStream ms = new MemoryStream(imageData))
+                        {
+                            avatarImage.BeginInit();
+                            avatarImage.CacheOption = BitmapCacheOption.OnLoad;
+                            avatarImage.StreamSource = ms;
+                            avatarImage.EndInit();
+                        }
+
+                        UserAvatarSource = avatarImage;
+                        HasUserAvatar = true;
+                        Logger.Log("[MainWindow] Аватарка пользователя загружена", LogLevel.Debug);
+                    }
+                    else
+                    {
+                        UserAvatarSource = null;
+                        HasUserAvatar = false;
+                        Logger.Log("[MainWindow] У пользователя нет аватарки", LogLevel.Debug);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(ex, "[MainWindow] Ошибка при загрузке аватарки");
+                UserAvatarSource = null;
+                HasUserAvatar = false;
+            }
+        }
+
+        public void UpdateAvatar()
+        {
+            Logger.Log("[MainWindow] Обновление аватарки пользователя", LogLevel.Debug);
+            LoadUserAvatar();
         }
 
         private void MainWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
@@ -110,12 +225,25 @@ namespace RavenHub
             {
                 Logger.Log($"[MainWindow] Окно загружено. Пользователь: {Username ?? "null"}, Admin: {IsAdmin}", LogLevel.Info);
 
+                // Применяем тему окна
+                WindowThemeHelper.ApplyWindowTheme(this);
+
                 StatisticsButton.Visibility = IsAdmin ? Visibility.Visible : Visibility.Collapsed;
                 Logger.Log($"[MainWindow] Статистика доступна: {IsAdmin}", LogLevel.Debug);
+
+                // Устанавливаем DataContext для текстовых блоков
+                HomeText.DataContext = LocaleManager.Instance;
+                EquipmentText.DataContext = LocaleManager.Instance;
+                EmployeesText.DataContext = LocaleManager.Instance;
+                TasksText.DataContext = LocaleManager.Instance;
+                StatisticsText.DataContext = LocaleManager.Instance;
 
                 _sidebarManager.InitializeTextBlocks();
                 _sidebarManager.CompleteInitialization();
                 Logger.Log("[MainWindow] Сайдбар инициализирован", LogLevel.Debug);
+
+                // Загружаем аватарку пользователя
+                LoadUserAvatar();
 
                 Logger.Log("[MainWindow] Начало первичной навигации", LogLevel.Debug);
                 MainFrame.Navigate(new HomePage(MainFrame, Username));
@@ -226,6 +354,33 @@ namespace RavenHub
             }
         }
 
+        private void AccountButton_Click(object sender, RoutedEventArgs e)
+        {
+            Logger.Log("[MainWindow] Нажата кнопка 'Мой аккаунт'", LogLevel.Debug);
+            try
+            {
+                MainFrame.Navigate(new AccountPage(Username, IsAdmin));
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(ex, "[MainWindow] Ошибка при переходе на AccountPage");
+            }
+        }
+
+        private void ThemeButton_Click(object sender, RoutedEventArgs e)
+        {
+            Logger.Log("[MainWindow] Нажата кнопка переключения темы", LogLevel.Debug);
+            try
+            {
+                ThemeManager.ToggleTheme();
+                Logger.Log("[MainWindow] Тема переключена", LogLevel.Debug);
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(ex, "[MainWindow] Ошибка при переключении темы");
+            }
+        }
+
         private void ToggleSidebarButton_Click(object sender, RoutedEventArgs e)
         {
             Logger.Log("[MainWindow] Нажата кнопка переключения сайдбара", LogLevel.Debug);
@@ -264,6 +419,11 @@ namespace RavenHub
             {
                 Logger.Log(ex, "[MainWindow] Ошибка при выходе из системы");
             }
+        }
+
+        private void ImageBrush_SuggestionChosen(object sender, RoutedPropertyChangedEventArgs<object> e)
+        {
+
         }
     }
 }

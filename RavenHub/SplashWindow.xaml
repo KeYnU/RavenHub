@@ -1,45 +1,82 @@
 ﻿<Window x:Class="RavenHub.SplashWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        WindowStyle="None" 
-        AllowsTransparency="True"
-        Background="Transparent" 
-        ResizeMode="NoResize"
-        WindowStartupLocation="CenterScreen"
-        Width="600" 
-        Height="400">
-    <Window.Resources>
-        <Storyboard x:Key="PulseAnimation" x:Shared="False">
-            <DoubleAnimationUsingKeyFrames Storyboard.TargetProperty="(UIElement.Opacity)">
-                <DiscreteDoubleKeyFrame KeyTime="0:0:0" Value="0.5"/>
-                <DiscreteDoubleKeyFrame KeyTime="0:0:0.3" Value="1"/>
-            </DoubleAnimationUsingKeyFrames>
-        </Storyboard>
-    </Window.Resources>
+        WindowStyle="None" AllowsTransparency="True" 
+        Background="Transparent" ResizeMode="NoResize"
+        Width="500" Height="350" WindowStartupLocation="CenterScreen">
 
-    <Grid>
-        <!-- Изображение -->
-        <Image Source="Start/splash.png" Stretch="UniformToFill"/>
+    <Border CornerRadius="20" Background="#252626" 
+            BorderBrush="#353535" BorderThickness="1"
+            Effect="{StaticResource ShadowEffect}">
+        <Grid>
+            <!-- Фоновый градиент -->
+            <Rectangle RadiusX="20" RadiusY="20">
+                <Rectangle.Fill>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                        <GradientStop Color="#FF252626" Offset="0"/>
+                        <GradientStop Color="#FF1A1A1A" Offset="1"/>
+                    </LinearGradientBrush>
+                </Rectangle.Fill>
+            </Rectangle>
 
-        <!-- Текст статуса подключения -->
-        <TextBlock x:Name="ConnectionStatusText"
-                   Text="Проверка подключения к базе данных..."
-                   Foreground="White"
-                   HorizontalAlignment="Center"
-                   VerticalAlignment="Bottom"
-                   Margin="0,0,0,0"
-                   FontSize="14"
-                   FontWeight="SemiBold"/>
+            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                <!-- Логотип с анимацией -->
+                <TextBlock x:Name="LogoText"
+                           Text="RAVENHUB" 
+                           Foreground="White"
+                           FontSize="56"
+                           FontWeight="Bold"
+                           FontFamily="Segoe UI"
+                           HorizontalAlignment="Center"
+                           Margin="0,0,0,40">
+                    <TextBlock.Effect>
+                        <DropShadowEffect Color="White" BlurRadius="10" Opacity="0.5"/>
+                    </TextBlock.Effect>
+                </TextBlock>
 
-        <!-- Прогресс-бар -->
-        <ProgressBar x:Name="ProgressBarControl"
-                    VerticalAlignment="Bottom"
-                    Height="8" 
-                    Margin="40,0,40,20"
-                    Foreground="#FF0078D7" 
-                    Background="#330078D7"
-                    IsIndeterminate="False"
-                    Maximum="100" 
-                    Value="0"/>
-    </Grid>
+                <!-- Анимированные точки с эффектом -->
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,40">
+                    <Ellipse x:Name="Dot1" Width="16" Height="16" Fill="White" Margin="8" 
+                             RenderTransformOrigin="0.5,0.5">
+                        <Ellipse.Effect>
+                            <DropShadowEffect Color="White" BlurRadius="8" Opacity="0.4"/>
+                        </Ellipse.Effect>
+                        <Ellipse.RenderTransform>
+                            <TranslateTransform Y="0"/>
+                        </Ellipse.RenderTransform>
+                    </Ellipse>
+                    <Ellipse x:Name="Dot2" Width="16" Height="16" Fill="White" Margin="8"
+                             RenderTransformOrigin="0.5,0.5">
+                        <Ellipse.Effect>
+                            <DropShadowEffect Color="White" BlurRadius="8" Opacity="0.4"/>
+                        </Ellipse.Effect>
+                        <Ellipse.RenderTransform>
+                            <TranslateTransform Y="0"/>
+                        </Ellipse.RenderTransform>
+                    </Ellipse>
+                    <Ellipse x:Name="Dot3" Width="16" Height="16" Fill="White" Margin="8"
+                             RenderTransformOrigin="0.5,0.5">
+                        <Ellipse.Effect>
+                            <DropShadowEffect Color="White" BlurRadius="8" Opacity="0.4"/>
+                        </Ellipse.Effect>
+                        <Ellipse.RenderTransform>
+                            <TranslateTransform Y="0"/>
+                        </Ellipse.RenderTransform>
+                    </Ellipse>
+                </StackPanel>
+
+                <!-- Текст статуса с анимацией -->
+                <TextBlock x:Name="ConnectionStatusText"
+                           Text="Инициализация системы..."
+                           Foreground="White"
+                           HorizontalAlignment="Center"
+                           Margin="0,20,0,0"
+                           FontSize="14"
+                           FontFamily="Segoe UI Light"
+                           TextAlignment="Center"
+                           Width="300"
+                           TextWrapping="Wrap"/>
+            </StackPanel>
+        </Grid>
+    </Border>
 </Window>

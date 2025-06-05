@@ -23,7 +23,7 @@ namespace RavenHub
             {
                 _connection = new SqlConnection(_connectionString);
                 await _connection.OpenAsync();
-                _connection.Close(); // Заменяем CloseAsync на Close
+                _connection.Close();
                 return (true, null);
             }
             catch (SqlException sqlEx)

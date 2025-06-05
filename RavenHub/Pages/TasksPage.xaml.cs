@@ -9,13 +9,15 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
+using RavenHub.Pages;
 using System.Windows.Media;
+using MaterialDesignThemes.Wpf;
 
 namespace RavenHub.Pages
 {
     public partial class TasksPage : Page, INotifyPropertyChanged
     {
-        private string connectionString = @"Data Source=LAPTOP-REGTVFN9; Initial Catalog=RavenHub; Integrated Security=True;";
+        private string connectionString = @"Data Source=.; Initial Catalog=RavenHub; Integrated Security=True;";
         private DataTable _tasksTable;
         private DataRowView _selectedTask;
         private string _searchText;
@@ -23,21 +25,21 @@ namespace RavenHub.Pages
 
         public DataTable TasksTable
         {
-            get => _tasksTable;
+            get { return _tasksTable; }
             set { _tasksTable = value; OnPropertyChanged(nameof(TasksTable)); }
         }
 
         public DataRowView SelectedTask
         {
-            get => _selectedTask;
-            set { _selectedTask = value; OnPropertyChanged(nameof(SelectedTask)); }
+            get { return _selectedTask; }
+            set { _selectedTask = value; OnPropertyChanged(nameof(SelectedTask)); OnPropertyChanged(nameof(HasSelectedTask)); }
         }
 
         public bool HasSelectedTask => SelectedTask != null;
 
         public string SearchText
         {
-            get => _searchText;
+            get { return _searchText; }
             set { _searchText = value; OnPropertyChanged(nameof(SearchText)); FilterTasks(); }
         }
 
@@ -48,14 +50,13 @@ namespace RavenHub.Pages
 
         public string SelectedStatusFilter
         {
-            get => _selectedStatusFilter;
+            get { return _selectedStatusFilter; }
             set { _selectedStatusFilter = value; OnPropertyChanged(nameof(SelectedStatusFilter)); FilterTasks(); }
         }
 
         public ICommand CreateTaskCommand { get; }
         public ICommand EditTaskCommand { get; }
         public ICommand DeleteTaskCommand { get; }
-        public ICommand ToggleViewCommand { get; }
 
         public TasksPage()
         {
@@ -65,29 +66,62 @@ namespace RavenHub.Pages
             CreateTaskCommand = new RelayCommand(_ => CreateTask());
             EditTaskCommand = new RelayCommand(_ => EditTask(), _ => HasSelectedTask);
             DeleteTaskCommand = new RelayCommand(_ => DeleteTask(), _ => HasSelectedTask);
-            ToggleViewCommand = new RelayCommand(_ => ToggleView());
 
             SelectedStatusFilter = StatusFilters.First();
             InitializeTasks();
+
+            TasksDataGrid.LoadingRow += TasksDataGrid_LoadingRow;
+        }
+
+        private void TasksDataGrid_LoadingRow(object sender, DataGridRowEventArgs e)
+        {
+            if (e.Row.Item is DataRowView rowView)
+            {
+                e.Row.Tag = rowView;
+            }
+        }
+
+        private bool TestConnection()
+        {
+            try
+            {
+                using (var connection = new SqlConnection(connectionString))
+                {
+                    connection.Open();
+                    return true;
+                }
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         private void InitializeTasks()
         {
+            if (!TestConnection())
+            {
+                MessageBox.Show("Не удалось подключиться к базе данных", "Ошибка",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
             try
             {
                 using (SqlConnection connection = new SqlConnection(connectionString))
                 {
                     connection.Open();
                     SqlDataAdapter dataAdapter = new SqlDataAdapter("SELECT * FROM Tasks", connection);
-                    TasksTable = new DataTable();
-                    dataAdapter.Fill(TasksTable);
+                    DataTable newTable = new DataTable();
+                    dataAdapter.Fill(newTable);
 
-                    TasksDataGrid.ItemsSource = TasksTable.DefaultView;
+                    TasksTable = newTable;
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Ошибка при подключении: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show($"Ошибка при загрузке задач: {ex.Message}", "Ошибка",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -95,32 +129,11 @@ namespace RavenHub.Pages
         {
             if (TasksTable == null) return;
 
-            string filter = "";
-            if (!string.IsNullOrWhiteSpace(SearchText))
-            {
-                filter = $"Title LIKE '%{SearchText}%' OR Description LIKE '%{SearchText}%'";
-            }
-
-            switch (SelectedStatusFilter)
-            {
-                case "Активные":
-                    filter = string.IsNullOrEmpty(filter)
-                        ? "IsCompleted = 0 AND Deadline >= GETDATE()"
-                        : $"{filter} AND IsCompleted = 0 AND Deadline >= GETDATE()";
-                    break;
-                case "Просроченные":
-                    filter = string.IsNullOrEmpty(filter)
-                        ? "IsCompleted = 0 AND Deadline < GETDATE()"
-                        : $"{filter} AND IsCompleted = 0 AND Deadline < GETDATE()";
-                    break;
-                case "Завершенные":
-                    filter = string.IsNullOrEmpty(filter)
-                        ? "IsCompleted = 1"
-                        : $"{filter} AND IsCompleted = 1";
-                    break;
-            }
-
-            TasksTable.DefaultView.RowFilter = filter;
+            TaskFilter.ApplyFilter(
+                TasksTable.DefaultView,
+                SearchText,
+                SelectedStatusFilter
+            );
         }
 
         private void CreateTask()
@@ -128,27 +141,42 @@ namespace RavenHub.Pages
             var window = new CreateTaskWindow();
             if (window.ShowDialog() == true)
             {
-                var taskData = window.TaskData;
-                DataRow newRow = TasksTable.NewRow();
-                newRow["Title"] = taskData["Title"];
-                newRow["Description"] = taskData["Description"];
-                newRow["Deadline"] = DateTime.Now.AddDays(1);
-                newRow["IsCompleted"] = false;
-                newRow["CreatedAt"] = DateTime.Now;
-
-                using (SqlConnection connection = new SqlConnection(connectionString))
+                try
                 {
-                    connection.Open();
-                    SqlCommand command = new SqlCommand("SELECT ISNULL(MAX(TaskId), 0) + 1 FROM Tasks", connection);
-                    newRow["TaskId"] = (int)command.ExecuteScalar();
+                    var taskData = window.TaskData;
+                    using (SqlConnection connection = new SqlConnection(connectionString))
+                    {
+                        connection.Open();
 
-                    SqlDataAdapter dataAdapter = new SqlDataAdapter("SELECT * FROM Tasks", connection);
-                    SqlCommandBuilder commandBuilder = new SqlCommandBuilder(dataAdapter);
-                    TasksTable.Rows.Add(newRow);
-                    dataAdapter.Update(TasksTable);
+                        SqlCommand getIdCommand = new SqlCommand("SELECT ISNULL(MAX(TaskId), 0) + 1 FROM Tasks", connection);
+                        int newId = (int)getIdCommand.ExecuteScalar();
+
+                        SqlCommand insertCommand = new SqlCommand(
+                            "INSERT INTO Tasks (TaskId, Title, Description, Deadline, IsCompleted, CreatedAt) " +
+                            "VALUES (@TaskId, @Title, @Description, @Deadline, @IsCompleted, @CreatedAt)", connection);
+
+                        insertCommand.Parameters.AddWithValue("@TaskId", newId);
+                        insertCommand.Parameters.AddWithValue("@Title", taskData["Title"]);
+                        insertCommand.Parameters.AddWithValue("@Description", taskData["Description"]);
+
+                        object deadlineValue = taskData.ContainsKey("Deadline") ?
+                            taskData["Deadline"] :
+                            (object)DateTime.Now.AddDays(1);
+                        insertCommand.Parameters.AddWithValue("@Deadline", deadlineValue);
+
+                        insertCommand.Parameters.AddWithValue("@IsCompleted", false);
+                        insertCommand.Parameters.AddWithValue("@CreatedAt", DateTime.Now);
+
+                        insertCommand.ExecuteNonQuery();
+                    }
+
+                    InitializeTasks();
                 }
-
-                FilterTasks();
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Ошибка при создании задачи: {ex.Message}", "Ошибка",
+                        MessageBoxButton.OK, MessageBoxImage.Error);
+                }
             }
         }
 
@@ -161,41 +189,60 @@ namespace RavenHub.Pages
 
             if (window.ShowDialog() == true)
             {
-                var taskData = window.TaskData;
-                SelectedTask["Title"] = taskData["Title"];
-                SelectedTask["Description"] = taskData["Description"];
-
-                using (SqlConnection connection = new SqlConnection(connectionString))
+                try
                 {
-                    connection.Open();
-                    SqlDataAdapter dataAdapter = new SqlDataAdapter("SELECT * FROM Tasks", connection);
-                    SqlCommandBuilder commandBuilder = new SqlCommandBuilder(dataAdapter);
-                    dataAdapter.Update(TasksTable);
-                }
+                    var taskData = window.TaskData;
+                    using (SqlConnection connection = new SqlConnection(connectionString))
+                    {
+                        connection.Open();
 
-                FilterTasks();
+                        SqlCommand updateCommand = new SqlCommand(
+                            "UPDATE Tasks SET Title = @Title, Description = @Description " +
+                            "WHERE TaskId = @TaskId", connection);
+
+                        updateCommand.Parameters.AddWithValue("@TaskId", SelectedTask["TaskId"]);
+                        updateCommand.Parameters.AddWithValue("@Title", taskData["Title"]);
+                        updateCommand.Parameters.AddWithValue("@Description", taskData["Description"]);
+
+                        updateCommand.ExecuteNonQuery();
+                    }
+
+                    InitializeTasks();
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Ошибка при редактировании задачи: {ex.Message}", "Ошибка",
+                        MessageBoxButton.OK, MessageBoxImage.Error);
+                }
             }
         }
 
         private void DeleteTask()
         {
-            if (MessageBox.Show("Удалить выбранную задачу?", "Подтверждение", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+            if (MessageBox.Show("Удалить выбранную задачу?", "Подтверждение",
+                MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
             {
-                SelectedTask.Row.Delete();
-                using (SqlConnection connection = new SqlConnection(connectionString))
+                try
                 {
-                    connection.Open();
-                    SqlDataAdapter dataAdapter = new SqlDataAdapter("SELECT * FROM Tasks", connection);
-                    SqlCommandBuilder commandBuilder = new SqlCommandBuilder(dataAdapter);
-                    dataAdapter.Update(TasksTable);
-                }
-                FilterTasks();
-            }
-        }
+                    using (SqlConnection connection = new SqlConnection(connectionString))
+                    {
+                        connection.Open();
 
-        private void ToggleView()
-        {
-            // Логика переключения вида (если нужна)
+                        SqlCommand deleteCommand = new SqlCommand(
+                            "DELETE FROM Tasks WHERE TaskId = @TaskId", connection);
+
+                        deleteCommand.Parameters.AddWithValue("@TaskId", SelectedTask["TaskId"]);
+                        deleteCommand.ExecuteNonQuery();
+                    }
+
+                    InitializeTasks();
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Ошибка при удалении задачи: {ex.Message}", "Ошибка",
+                        MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
         }
 
         public event PropertyChangedEventHandler PropertyChanged;
@@ -209,20 +256,27 @@ namespace RavenHub.Pages
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            if (value is bool isCompleted && targetType == typeof(MaterialDesignThemes.Wpf.PackIconKind))
-            {
-                var row = (parameter as System.Data.DataRowView)?.Row;
-                if (row == null) return MaterialDesignThemes.Wpf.PackIconKind.ProgressClock;
+            if (!(value is bool isCompleted))
+                return PackIconKind.ProgressClock;
 
-                DateTime deadline = row.Field<DateTime>("Deadline");
+            if (!(parameter is DataRowView rowView))
+                return PackIconKind.ProgressClock;
+
+            try
+            {
+                DateTime deadline = rowView["Deadline"] is DateTime dt ? dt : DateTime.MinValue;
+
                 if (isCompleted)
-                    return MaterialDesignThemes.Wpf.PackIconKind.CheckBold;
-                else if (deadline < DateTime.Now)
-                    return MaterialDesignThemes.Wpf.PackIconKind.Alert;
-                else
-                    return MaterialDesignThemes.Wpf.PackIconKind.ProgressClock;
+                    return PackIconKind.CheckBold;
+                if (deadline < DateTime.Now)
+                    return PackIconKind.Alert;
+
+                return PackIconKind.ProgressClock;
             }
-            return MaterialDesignThemes.Wpf.PackIconKind.ProgressClock;
+            catch
+            {
+                return PackIconKind.ProgressClock;
+            }
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
@@ -235,20 +289,27 @@ namespace RavenHub.Pages
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            if (value is bool isCompleted && targetType == typeof(Brush))
-            {
-                var row = (parameter as System.Data.DataRowView)?.Row;
-                if (row == null) return Brushes.Orange;
+            if (!(value is bool isCompleted))
+                return Brushes.Orange;
 
-                DateTime deadline = row.Field<DateTime>("Deadline");
+            if (!(parameter is DataRowView rowView))
+                return Brushes.Orange;
+
+            try
+            {
+                DateTime deadline = rowView["Deadline"] is DateTime dt ? dt : DateTime.MinValue;
+
                 if (isCompleted)
                     return Brushes.Green;
-                else if (deadline < DateTime.Now)
+                if (deadline < DateTime.Now)
                     return Brushes.Red;
-                else
-                    return Brushes.Orange;
+
+                return Brushes.Orange;
             }
-            return Brushes.Orange;
+            catch
+            {
+                return Brushes.Orange;
+            }
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)

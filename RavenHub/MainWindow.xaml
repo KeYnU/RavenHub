@@ -11,9 +11,14 @@
         WindowStartupLocation="CenterScreen"
         Icon="/Images/RavenHub.jpg"
         Background="{DynamicResource MaterialDesignBackground}"
-        FontSize="16">
+        FontSize="16"
+        Foreground="{DynamicResource MaterialDesignBody}">
 
-    <Grid x:Name="MainGrid" DataContext="{x:Static local:LocaleManager.Instance}">
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+    </Window.Resources>
+
+    <Grid x:Name="MainGrid">
         <Grid.ColumnDefinitions>
             <ColumnDefinition x:Name="SidebarColumn" Width="80"/>
             <ColumnDefinition Width="*"/>
@@ -114,21 +119,66 @@
                 </StackPanel>
 
                 <!-- Нижние кнопки -->
-                <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="0,0,0,14">
+                <StackPanel Grid.Row="2" Orientation="Vertical" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="0,0,0,14">
+                    <!-- Кнопка аккаунта с аватаркой -->
                     <Button Width="53" Height="40"
-                            Background="Transparent"
-                            BorderThickness="0"
-                            Click="SettingsButton_Click"
-                            ToolTip="{Binding Settings}">
-                        <materialDesign:PackIcon Kind="Cog" Width="22" Height="22"/>
+            Style="{StaticResource MaterialDesignFlatButton}"
+            BorderThickness="1"
+            Click="AccountButton_Click"
+            ToolTip="Мой аккаунт"
+            Padding="0"
+            DataContext="{Binding RelativeSource={RelativeSource AncestorType=Window}}">
+                        <Grid Width="40" Height="40">
+                            <!-- Стандартная иконка аккаунта (показывается, когда нет аватарки) -->
+                            <materialDesign:PackIcon Kind="Account" 
+                                    Width="30" Height="30" 
+                                    HorizontalAlignment="Center" 
+                                    VerticalAlignment="Center"
+                                    Foreground="{DynamicResource MaterialDesignBody}"
+                                    Visibility="{Binding ShowDefaultAvatar, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+
+                            <!-- Аватарка пользователя (показывается, когда есть аватарка) -->
+                            <Border Width="30" Height="30" 
+                    VerticalAlignment="Center" 
+                    HorizontalAlignment="Center"
+                    CornerRadius="15" 
+                    BorderBrush="{DynamicResource MaterialDesignDivider}" 
+                    BorderThickness="1"
+                    Visibility="{Binding HasUserAvatar, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <Border.Background>
+                                    <ImageBrush Stretch="Uniform" ImageSource="{Binding UserAvatarSource}"/>
+                                </Border.Background>
+                            </Border>
+                        </Grid>
                     </Button>
+
+                    <Button Width="53" Height="40"
+            Style="{StaticResource MaterialDesignFlatButton}"
+            BorderThickness="0"
+            Click="SettingsButton_Click"
+            ToolTip="{Binding Settings}">
+                        <materialDesign:PackIcon Kind="Cog" Width="22" Height="22" 
+                                Foreground="{DynamicResource MaterialDesignBody}"/>
+                    </Button>
+
+                    <!-- КНОПКА ПЕРЕКЛЮЧЕНИЯ ТЕМЫ -->
+                    <Button Width="53" Height="40"
+            Style="{StaticResource MaterialDesignFlatButton}"
+            BorderThickness="0"
+            Click="ThemeButton_Click"
+            ToolTip="Переключить тему">
+                        <materialDesign:PackIcon Kind="ThemeLightDark" Width="22" Height="22" 
+                                Foreground="{DynamicResource MaterialDesignBody}"/>
+                    </Button>
+
                     <Button x:Name="LogoutButton"
-                            Width="53" Height="40"
-                            Background="Transparent"
-                            BorderThickness="0"
-                            Click="LogoutButton_Click"
-                            ToolTip="Выйти из аккаунта">
-                        <materialDesign:PackIcon Kind="Logout" Width="22" Height="22"/>
+            Width="53" Height="40"
+            Style="{StaticResource MaterialDesignFlatButton}"
+            BorderThickness="0"
+            Click="LogoutButton_Click"
+            ToolTip="Выйти из аккаунта">
+                        <materialDesign:PackIcon Kind="Logout" Width="22" Height="22" 
+                                Foreground="{DynamicResource MaterialDesignBody}"/>
                     </Button>
                 </StackPanel>
             </Grid>

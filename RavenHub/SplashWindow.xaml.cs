@@ -3,75 +3,113 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
+using System.Windows.Shapes;
 
 namespace RavenHub
 {
     public partial class SplashWindow : Window
     {
-        public System.Windows.Controls.ProgressBar ProgressBar => ProgressBarControl;
-
         public SplashWindow()
         {
             InitializeComponent();
+            StartAnimations();
         }
 
-        public async Task<bool> CheckConnectionWithFeedback(DatabaseConnectionService dbService)
+        private void StartAnimations()
+        {
+            // Анимация прыгающих точек
+            var bounceDuration = TimeSpan.FromSeconds(0.8);
+            var easing = new ElasticEase { Oscillations = 1, Springiness = 3 };
+
+            // Анимация для первой точки
+            var bounce1 = new DoubleAnimation(0, -15, bounceDuration)
+            {
+                AutoReverse = true,
+                RepeatBehavior = RepeatBehavior.Forever,
+                EasingFunction = easing
+            };
+            Dot1.RenderTransform.BeginAnimation(TranslateTransform.YProperty, bounce1);
+
+            // Анимация для второй точки (с задержкой)
+            var bounce2 = new DoubleAnimation(0, -15, bounceDuration)
+            {
+                AutoReverse = true,
+                RepeatBehavior = RepeatBehavior.Forever,
+                EasingFunction = easing,
+                BeginTime = TimeSpan.FromSeconds(0.15)
+            };
+            Dot2.RenderTransform.BeginAnimation(TranslateTransform.YProperty, bounce2);
+
+            // Анимация для третьей точки (с задержкой)
+            var bounce3 = new DoubleAnimation(0, -15, bounceDuration)
+            {
+                AutoReverse = true,
+                RepeatBehavior = RepeatBehavior.Forever,
+                EasingFunction = easing,
+                BeginTime = TimeSpan.FromSeconds(0.3)
+            };
+            Dot3.RenderTransform.BeginAnimation(TranslateTransform.YProperty, bounce3);
+
+            // Пульсация логотипа
+            var pulse = new DoubleAnimation(0.9, 1.05, TimeSpan.FromSeconds(2))
+            {
+                AutoReverse = true,
+                RepeatBehavior = RepeatBehavior.Forever
+            };
+            var scale = new ScaleTransform();
+            LogoText.RenderTransform = scale;
+            LogoText.RenderTransformOrigin = new Point(0.5, 0.5);
+            scale.BeginAnimation(ScaleTransform.ScaleXProperty, pulse);
+            scale.BeginAnimation(ScaleTransform.ScaleYProperty, pulse);
+        }
+
+        public async Task<bool> CheckDatabaseConnection(DatabaseConnectionService dbService)
         {
             // Первая попытка
-            UpdateStatus("Подключение к базе данных...", Colors.White);
-            ProgressBarControl.Value = 30;
+            UpdateStatus("Установка соединения с базой данных...", Color.FromRgb(110, 195, 255));
 
             var (isConnected, error) = await dbService.TestConnectionAsync();
 
             if (!isConnected)
             {
                 // Вторая попытка с задержкой
-                UpdateStatus("Повторная попытка подключения...", Colors.Orange);
-                ProgressBarControl.Value = 60;
+                UpdateStatus("Повторное подключение...", Color.FromRgb(255, 180, 0));
                 await Task.Delay(2000);
 
                 (isConnected, error) = await dbService.TestConnectionAsync();
-                ProgressBarControl.Value = 90;
             }
 
             if (isConnected)
             {
-                UpdateStatus("✓ Подключение успешно", Colors.LimeGreen);
-                ProgressBarControl.Value = 100;
-                ProgressBarControl.Foreground = new SolidColorBrush(Colors.LimeGreen);
+                UpdateStatus("✓ Соединение установлено", Color.FromRgb(100, 220, 100));
                 await Task.Delay(1000);
                 return true;
             }
             else
             {
-                UpdateStatus("✗ Не удалось подключиться", Colors.Red);
-                ProgressBarControl.Foreground = new SolidColorBrush(Colors.Red);
+                UpdateStatus($"✗ Ошибка: {error}", Color.FromRgb(255, 100, 100));
                 await Task.Delay(1500);
                 return false;
             }
         }
 
-        private void UpdateStatus(string message, Color color)
+        public void UpdateStatus(string message, Color color)
         {
             Dispatcher.Invoke(() =>
             {
-                ConnectionStatusText.Text = message;
-                ConnectionStatusText.Foreground = new SolidColorBrush(color);
-
-                // Создаем новую анимацию вместо поиска в ресурсах
-                var storyboard = new Storyboard();
-                var animation = new DoubleAnimation
+                // Анимация исчезновения
+                var fadeOut = new DoubleAnimation(1, 0, TimeSpan.FromSeconds(0.15));
+                fadeOut.Completed += (s, e) =>
                 {
-                    From = 0.5,
-                    To = 1,
-                    Duration = TimeSpan.FromSeconds(0.3),
-                    AutoReverse = false
+                    ConnectionStatusText.Text = message;
+                    ConnectionStatusText.Foreground = new SolidColorBrush(color);
+
+                    // Анимация появления
+                    var fadeIn = new DoubleAnimation(0, 1, TimeSpan.FromSeconds(0.3));
+                    ConnectionStatusText.BeginAnimation(OpacityProperty, fadeIn);
                 };
 
-                Storyboard.SetTarget(animation, ConnectionStatusText);
-                Storyboard.SetTargetProperty(animation, new PropertyPath(UIElement.OpacityProperty));
-                storyboard.Children.Add(animation);
-                storyboard.Begin();
+                ConnectionStatusText.BeginAnimation(OpacityProperty, fadeOut);
             });
         }
     }
